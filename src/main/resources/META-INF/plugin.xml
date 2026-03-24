@@ -1,0 +1,36 @@
+<idea-plugin>
+    <id>com.taskmanager.jb-task-manager-extension</id>
+    <name>Task Manager</name>
+    <version>1.0.0</version>
+    <vendor>Personal</vendor>
+    <description><![CDATA[
+        Task management plugin with Claude Code integration.
+        Manage task groups and individual tasks within your project.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Task Manager"
+                    anchor="right"
+                    icon="AllIcons.Toolwindows.ToolWindowTodo"
+                    factoryClass="com.taskmanager.ui.TaskManagerToolWindowFactory"/>
+
+        <projectService
+            serviceImplementation="com.taskmanager.service.TaskStorageService"/>
+
+        <fileEditorProvider
+            implementation="com.taskmanager.ui.TaskManagerEditorProvider"/>
+    </extensions>
+
+    <actions>
+        <action id="TaskManager.OpenEditorTab"
+                class="com.taskmanager.actions.OpenEditorTabAction"
+                text="Open Task Manager"
+                description="Open Task Manager in editor tab"
+                icon="AllIcons.Toolwindows.ToolWindowTodo">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
