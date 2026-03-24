@@ -60,9 +60,10 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
     private fun createToolbar(): ActionToolbar {
         val actionGroup = DefaultActionGroup().apply {
             add(createSimpleAction("Refresh", AllIcons.Actions.Refresh) { refresh() })
-            add(createSimpleAction("Create Task", AllIcons.General.Add) {
-                val dialog = CreateTaskDialog(project)
-                if (dialog.showAndGet()) refresh()
+            add(createSimpleAction("Create Task with Claude", AllIcons.General.Add) {
+                ApplicationManager.getApplication().invokeLater {
+                    TerminalHelper.runClaudeSkill(project, "task-create", "", "Create Task")
+                }
             })
             addSeparator()
             add(createSimpleAction("Open in Editor", AllIcons.Actions.MoveToWindow) {
@@ -124,9 +125,8 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
         createPanel.isOpaque = false
         val createButton = javax.swing.JButton("+ New Group / Task")
         createButton.addActionListener {
-            val dialog = CreateTaskDialog(project)
-            if (dialog.showAndGet()) {
-                refresh()
+            ApplicationManager.getApplication().invokeLater {
+                TerminalHelper.runClaudeSkill(project, "task-create", "", "Create Task")
             }
         }
         createPanel.add(createButton)

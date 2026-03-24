@@ -8,7 +8,7 @@ import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 object TerminalHelper {
 
     fun runClaudeSkill(project: Project, skillName: String, argument: String, tabName: String) {
-        val command = "claude /$skillName $argument"
+        val command = if (argument.isBlank()) "claude /$skillName" else "claude /$skillName $argument"
         openTerminalAndRun(project, tabName, command)
     }
 
