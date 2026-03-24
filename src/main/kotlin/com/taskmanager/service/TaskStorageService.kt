@@ -59,6 +59,27 @@ class TaskStorageService(private val project: Project) {
     private fun getTasksFilePath(): Path = getTasksBasePath().resolve("tasks.json")
     private fun getArchiveFilePath(): Path = getTasksBasePath().resolve("archive.json")
     private fun getDocsPath(): Path = getTasksBasePath().resolve("docs")
+    private fun getConfigFilePath(): Path = getTasksBasePath().resolve("config.json")
+
+    fun loadTrackerConfig(): TrackerConfig {
+        val path = getConfigFilePath()
+        if (!Files.exists(path)) return TrackerConfig()
+        val content = Files.readString(path)
+        if (content.isBlank()) return TrackerConfig()
+        return try {
+            json.decodeFromString<TrackerConfig>(content)
+        } catch (_: Exception) {
+            TrackerConfig()
+        }
+    }
+
+    fun saveTrackerConfig(config: TrackerConfig) {
+        ensureDirectories()
+        val content = json.encodeToString(TrackerConfig.serializer(), config)
+        Files.writeString(getConfigFilePath(), content)
+        refreshVfs()
+        notifyListeners()
+    }
 
     private fun ensureDirectories() {
         Files.createDirectories(getTasksBasePath())

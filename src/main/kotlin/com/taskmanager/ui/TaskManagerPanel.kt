@@ -69,6 +69,9 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
             add(createSimpleAction("Open in Editor", AllIcons.Actions.MoveToWindow) {
                 com.taskmanager.actions.OpenEditorTabAction.openEditorTab(project)
             })
+            add(createSimpleAction("Tracker Settings", AllIcons.General.GearPlain) {
+                TrackerSettingsDialog(project).show()
+            })
         }
 
         val toolbar = ActionManager.getInstance()

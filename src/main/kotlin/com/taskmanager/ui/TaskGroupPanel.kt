@@ -1,6 +1,7 @@
 package com.taskmanager.ui
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
@@ -8,6 +9,8 @@ import com.intellij.util.ui.UIUtil
 import com.taskmanager.model.Task
 import com.taskmanager.model.TaskGroup
 import com.taskmanager.model.TaskStatus
+import com.taskmanager.service.TaskStorageService
+import com.taskmanager.service.TrackerType
 import java.awt.*
 import java.time.Instant
 import java.time.ZoneId
@@ -49,13 +52,32 @@ class TaskGroupPanel(
         })
         leftHeader.add(collapseIcon)
 
-        // Group name
+        // Group name + optional tracker link
+        val trackerConfig = TaskStorageService.getInstance(project).loadTrackerConfig()
+        val externalId = trackerConfig.type.extractId(group.name)
+
         val nameLabel = JBLabel(group.name)
         nameLabel.font = nameLabel.font.deriveFont(Font.BOLD)
         if (group.isCompleted) {
             nameLabel.foreground = UIUtil.getInactiveTextColor()
         }
         leftHeader.add(nameLabel)
+
+        if (externalId != null && trackerConfig.type != TrackerType.NONE && trackerConfig.baseUrl.isNotBlank()) {
+            val url = trackerConfig.type.buildUrl(trackerConfig.baseUrl, externalId)
+            val linkLabel = JBLabel("\uD83D\uDD17 $externalId")
+            linkLabel.foreground = Color(0x589DF6)
+            linkLabel.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            linkLabel.font = linkLabel.font.deriveFont(Font.PLAIN, 11f)
+            linkLabel.toolTipText = url
+            linkLabel.border = JBUI.Borders.emptyLeft(6)
+            linkLabel.addMouseListener(object : java.awt.event.MouseAdapter() {
+                override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                    BrowserUtil.browse(url)
+                }
+            })
+            leftHeader.add(linkLabel)
+        }
 
         // Status badge
         val statusBadge = JBLabel(getStatusText(group.derivedStatus))
