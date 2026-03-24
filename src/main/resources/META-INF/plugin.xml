@@ -14,7 +14,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Task Manager"
                     anchor="right"
-                    icon="AllIcons.Toolwindows.ToolWindowTodo"
+                    icon="/icons/taskManager.svg"
                     factoryClass="com.taskmanager.ui.TaskManagerToolWindowFactory"/>
 
         <projectService

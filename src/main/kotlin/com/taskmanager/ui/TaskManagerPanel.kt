@@ -59,14 +59,17 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
 
     private fun createToolbar(): ActionToolbar {
         val actionGroup = DefaultActionGroup().apply {
-            add(ActionManager.getInstance().getAction("TaskManager.OpenEditorTab")
-                ?: createSimpleAction("Open in Editor", AllIcons.Actions.MoveToWindow) {
-                    com.taskmanager.actions.OpenEditorTabAction.openEditorTab(project)
-                })
+            add(createSimpleAction("Refresh", AllIcons.Actions.Refresh) { refresh() })
+            add(createSimpleAction("Create Task", AllIcons.General.Add) {
+                val dialog = CreateTaskDialog(project)
+                if (dialog.showAndGet()) refresh()
+            })
             addSeparator()
+            add(createSimpleAction("Open in Editor", AllIcons.Actions.MoveToWindow) {
+                com.taskmanager.actions.OpenEditorTabAction.openEditorTab(project)
+            })
         }
 
-        // Add custom buttons directly
         val toolbar = ActionManager.getInstance()
             .createActionToolbar("TaskManagerToolbar", actionGroup, true)
         toolbar.targetComponent = this

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13">
+  <!-- Checkbox checked -->
+  <rect x="1" y="1" width="4" height="4" rx="0.8" fill="none" stroke="#6E6E6E" stroke-width="1"/>
+  <polyline points="2.2,3.2 3.2,4 4.8,1.8" fill="none" stroke="#59A869" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Line 1 -->
+  <rect x="7" y="2" width="5" height="1.2" rx="0.6" fill="#6E6E6E"/>
+  <!-- Checkbox empty -->
+  <rect x="1" y="8" width="4" height="4" rx="0.8" fill="none" stroke="#6E6E6E" stroke-width="1"/>
+  <!-- Line 2 -->
+  <rect x="7" y="9" width="5" height="1.2" rx="0.6" fill="#6E6E6E"/>
+</svg>
