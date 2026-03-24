@@ -12,6 +12,12 @@ build/
 *.ipr
 out/
 
+# Kotlin
+.kotlin/
+
+# Claude local data
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db

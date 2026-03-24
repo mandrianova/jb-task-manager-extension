@@ -1,12 +1,27 @@
-# Task Manager — PyCharm Plugin
+# Task Manager — JetBrains Plugin
 
-Plugin for managing project tasks with Claude Code integration. Provides a UI for tracking task groups, statuses, and running tasks via Claude skills directly from the IDE.
+A task management plugin for JetBrains IDEs (PyCharm, IntelliJ IDEA, WebStorm, etc.) with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) integration. Manage project tasks from the IDE and execute them via Claude skills in the terminal.
+
+> **Note:** This plugin is not published to the JetBrains Marketplace. Install it manually from a ZIP file (see below).
+
+## Features
+
+- **Task groups** with collapsible lists and automatic status tracking
+- **Task statuses:** New, In Progress, Completed, Paused, Cancelled
+- **Markdown docs:** Each task links to a `.md` file with detailed description, plan, and results
+- **Claude integration:** Run tasks via `/task-execute` and create them via `/task-create` skills
+- **External tracker links:** Detects Linear, Jira, GitHub Issues, and YouTrack IDs in group names and renders clickable links
+- **Auto-create issues:** When creating tasks, can automatically create issues in external trackers via MCP
+- **Smart ordering:** Completed groups sink to the bottom, appear faded, and auto-collapse
+- **Pagination** with configurable page size
+- **Multiple views:** Side panel, bottom panel, or editor tab (center area)
+- **Auto-archiving** of completed groups to keep `tasks.json` compact
 
 ## Requirements
 
-- PyCharm Professional 2025.3
-- JDK 21 (`brew install openjdk@21`)
-- Claude Code CLI (for task execution)
+- JetBrains IDE 2025.3+ (PyCharm, IntelliJ IDEA, WebStorm, etc.)
+- JDK 21 for building (`brew install openjdk@21` on macOS)
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) for task execution
 
 ## Build
 
@@ -15,52 +30,97 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 ./gradlew buildPlugin
 ```
 
-The plugin ZIP will be at `build/distributions/jb-task-manager-extension-1.0.0.zip`.
+The plugin ZIP will be in `build/distributions/`.
 
-## Install in PyCharm
+## Install the plugin
 
-1. Open **PyCharm > Settings** (`Cmd + ,`)
-2. Go to **Plugins**
-3. Click the **gear icon** (top right) > **Install Plugin from Disk...**
-4. Select the ZIP file from `build/distributions/`
-5. Click **OK** and restart PyCharm
+1. Build the plugin (see above) or download a release ZIP
+2. Open your JetBrains IDE > **Settings** (`Cmd+,` / `Ctrl+Alt+S`)
+3. Go to **Plugins**
+4. Click the **gear icon** (top right) > **Install Plugin from Disk...**
+5. Select the `.zip` file from `build/distributions/`
+6. Click **OK** and **restart** the IDE
 
 After restart, the **Task Manager** tab appears in the right side panel.
 
-## Development mode
+## Install Claude skills
 
-To run a sandboxed PyCharm instance with the plugin loaded (no install needed):
+The plugin relies on two Claude Code skills for creating and executing tasks. Copy them to your global Claude skills directory:
+
+```bash
+# Create the skills directories
+mkdir -p ~/.claude/skills/task-execute
+mkdir -p ~/.claude/skills/task-create
+
+# Copy skill files from this repository
+cp skills/task-execute/SKILL.md ~/.claude/skills/task-execute/SKILL.md
+cp skills/task-create/SKILL.md ~/.claude/skills/task-create/SKILL.md
+```
+
+After copying, the skills are available globally in any project:
+
+- **`/task-execute <id>`** — Executes a task or group by ID. Follows a structured workflow: analyze → plan → implement → review → test → get feedback → commit → update status.
+- **`/task-create "Group" "Task" "Description"`** — Creates a new task group and/or task. Generates a markdown file with description, instructions, and acceptance criteria templates.
+
+## Usage
+
+### UI
+
+| Action | How |
+|--------|-----|
+| Open panel | Click **Task Manager** tab in the right sidebar |
+| Open as editor tab | **Tools > Open Task Manager** or click the window icon in the toolbar |
+| Move to bottom | Drag the tool window tab to the bottom bar |
+| Create task | Click **+** in toolbar or **+ New Group / Task** at the bottom — opens Claude with `/task-create` |
+| Run task | Click the ▶ play button on a task or group — opens Claude with `/task-execute` |
+| View details | Click the 📄 link on a task to open its markdown file |
+| Refresh | Click 🔄 in toolbar |
+| Configure tracker | Click ⚙ in toolbar |
+
+### External tracker integration
+
+1. Click the ⚙ gear icon in the toolbar
+2. Select your tracker type (Linear, Jira, GitHub Issues, YouTrack)
+3. Enter the base URL (e.g. `https://linear.app/yourteam`)
+4. Click OK
+
+When a group name contains a tracker ID (e.g. `ENG-123 Implement auth`), a clickable 🔗 link appears next to it. Clicking opens the issue in your browser.
+
+If a Linear MCP server is connected to Claude, the `/task-create` skill will automatically create issues in Linear and prepend the ID to the group name.
+
+### Data storage
+
+All task data lives inside the project, in a directory ignored by git:
+
+```
+<project>/.claude/tasks/
+├── tasks.json        # Active groups and tasks
+├── archive.json      # Auto-archived completed groups
+├── config.json       # Tracker settings (type, base URL)
+└── docs/             # Markdown files with task details
+    └── <groupId>/
+        └── <taskId>.md
+```
+
+## Development
+
+Run a sandboxed IDE instance with the plugin loaded (no install needed):
 
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 ./gradlew runIde
 ```
 
-## Usage
+### Targeting a different IDE
 
-- **Right panel**: Click "Task Manager" tab to open the tool window
-- **Editor tab**: Tools > Open Task Manager (opens in center, like a file)
-- **Bottom panel**: Drag the tool window tab to the bottom bar
-- **Create tasks**: Click "+ New Group / Task" button
-- **Run tasks**: Click the play button on a task or group — opens a terminal with `claude /task-execute <id>`
-- **View details**: Click the `.md` link on any task to open its description file
+By default, the plugin targets PyCharm (`PY`). To target IntelliJ IDEA, change in `gradle.properties`:
 
-### Claude Skills
-
-Two global skills are installed at `~/.claude/skills/`:
-
-- `/task-execute <id>` — executes a task or group, updates statuses
-- `/task-create "Group" "Task" "Description"` — creates a new task with an MD file
-
-### Data storage
-
-Task data is stored per-project:
-
+```properties
+platformType = IC
 ```
-<project>/.claude/tasks/
-├── tasks.json        # active groups and tasks
-├── archive.json      # completed groups (auto-archived)
-└── docs/             # markdown files with task details
-    └── <groupId>/
-        └── <taskId>.md
-```
+
+Common values: `PY` (PyCharm), `IC` (IntelliJ Community), `IU` (IntelliJ Ultimate), `WS` (WebStorm).
+
+## License
+
+MIT
