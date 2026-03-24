@@ -1,11 +1,28 @@
 <idea-plugin>
     <id>com.taskmanager.jb-task-manager-extension</id>
     <name>Task Manager</name>
-    <version>1.0.0</version>
     <vendor>Personal</vendor>
     <description><![CDATA[
-        Task management plugin with Claude Code integration.
-        Manage task groups and individual tasks within your project.
+        <p>Task management plugin with Claude Code integration for tracking and executing
+        project tasks directly from the IDE.</p>
+
+        <h3>Features</h3>
+        <ul>
+            <li>Organize tasks into collapsible groups with automatic status tracking</li>
+            <li>Task statuses: New, In Progress, Completed, Paused, Cancelled</li>
+            <li>Each task links to a Markdown file with detailed description and instructions</li>
+            <li>Run tasks via Claude Code — opens a terminal with <code>/task-execute</code> skill</li>
+            <li>Create tasks from the UI or via <code>/task-create</code> Claude skill</li>
+            <li>Completed groups auto-collapse and fade, sinking to the bottom of the list</li>
+            <li>Pagination with configurable page size</li>
+            <li>Available as a side panel, bottom panel, or editor tab</li>
+            <li>Auto-archiving of completed groups to keep the task file compact</li>
+        </ul>
+
+        <h3>Storage</h3>
+        <p>Tasks are stored per-project in <code>.claude/tasks/tasks.json</code> with Markdown
+        docs in <code>.claude/tasks/docs/</code>. Completed groups are archived to
+        <code>archive.json</code> automatically.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
