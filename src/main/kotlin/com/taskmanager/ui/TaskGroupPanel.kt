@@ -9,6 +9,9 @@ import com.taskmanager.model.Task
 import com.taskmanager.model.TaskGroup
 import com.taskmanager.model.TaskStatus
 import java.awt.*
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.swing.*
 
 class TaskGroupPanel(
@@ -67,6 +70,13 @@ class TaskGroupPanel(
         countLabel.font = countLabel.font.deriveFont(Font.PLAIN, 11f)
         countLabel.border = JBUI.Borders.emptyLeft(4)
         leftHeader.add(countLabel)
+
+        // Created date
+        val createdLabel = JBLabel(formatGroupDate(group.createdAt))
+        createdLabel.foreground = UIUtil.getContextHelpForeground()
+        createdLabel.font = createdLabel.font.deriveFont(Font.PLAIN, 10f)
+        createdLabel.border = JBUI.Borders.emptyLeft(8)
+        leftHeader.add(createdLabel)
 
         header.add(leftHeader, BorderLayout.CENTER)
 
@@ -135,5 +145,16 @@ class TaskGroupPanel(
         TaskStatus.COMPLETED -> Color(0x59A869)
         TaskStatus.PAUSED -> Color(0xD9A343)
         TaskStatus.CANCELLED -> Color(0xDB5860)
+    }
+
+    private fun formatGroupDate(isoDate: String): String {
+        return try {
+            val instant = Instant.parse(isoDate)
+            val formatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
+                .withZone(ZoneId.systemDefault())
+            formatter.format(instant)
+        } catch (_: Exception) {
+            ""
+        }
     }
 }

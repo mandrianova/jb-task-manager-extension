@@ -15,6 +15,9 @@ import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.Font
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.swing.*
 
 class TaskItemPanel(
@@ -25,15 +28,20 @@ class TaskItemPanel(
 
     init {
         border = JBUI.Borders.empty(2, 24, 2, 4)
-        maximumSize = Dimension(Int.MAX_VALUE, 32)
+        maximumSize = Dimension(Int.MAX_VALUE, 48)
 
-        val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0))
+        val leftPanel = JPanel()
+        leftPanel.layout = BoxLayout(leftPanel, BoxLayout.Y_AXIS)
         leftPanel.isOpaque = false
+
+        // Top row: status icon + name + md link
+        val topRow = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0))
+        topRow.isOpaque = false
 
         // Status icon
         val statusIcon = JBLabel(getStatusIcon(task.status))
         statusIcon.toolTipText = task.status.displayName
-        leftPanel.add(statusIcon)
+        topRow.add(statusIcon)
 
         // Task name
         val nameLabel = JBLabel(task.name)
@@ -41,7 +49,7 @@ class TaskItemPanel(
         if (task.status == TaskStatus.COMPLETED || task.status == TaskStatus.CANCELLED) {
             nameLabel.foreground = UIUtil.getInactiveTextColor()
         }
-        leftPanel.add(nameLabel)
+        topRow.add(nameLabel)
 
         // MD file link
         val mdLink = HyperlinkLabel(task.mdFile.substringAfterLast('/'))
@@ -49,7 +57,23 @@ class TaskItemPanel(
         mdLink.addHyperlinkListener {
             openMdFile()
         }
-        leftPanel.add(mdLink)
+        topRow.add(mdLink)
+
+        leftPanel.add(topRow)
+
+        // Bottom row: time info
+        val timeText = buildTimeInfo(task.createdAt, task.updatedAt)
+        if (timeText.isNotEmpty()) {
+            val timeRow = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0))
+            timeRow.isOpaque = false
+            timeRow.border = JBUI.Borders.emptyLeft(22) // align with name
+
+            val timeLabel = JBLabel(timeText)
+            timeLabel.font = timeLabel.font.deriveFont(Font.PLAIN, 10f)
+            timeLabel.foreground = UIUtil.getContextHelpForeground()
+            timeRow.add(timeLabel)
+            leftPanel.add(timeRow)
+        }
 
         add(leftPanel, BorderLayout.CENTER)
 
@@ -76,6 +100,37 @@ class TaskItemPanel(
         val virtualFile = VirtualFileManager.getInstance()
             .refreshAndFindFileByNioPath(absPath) ?: return
         FileEditorManager.getInstance(project).openFile(virtualFile, true)
+    }
+
+    private fun buildTimeInfo(createdAt: String, updatedAt: String): String {
+        return try {
+            val now = Instant.now()
+            val created = Instant.parse(createdAt)
+            val updated = Instant.parse(updatedAt)
+
+            val parts = mutableListOf<String>()
+            parts.add("opened ${formatRelativeTime(created, now)}")
+
+            if (created != updated) {
+                parts.add("updated ${formatRelativeTime(updated, now)}")
+            }
+
+            parts.joinToString(" · ")
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun formatRelativeTime(instant: Instant, now: Instant): String {
+        val minutes = ChronoUnit.MINUTES.between(instant, now)
+        return when {
+            minutes < 1 -> "just now"
+            minutes < 60 -> "${minutes}m ago"
+            minutes < 1440 -> "${minutes / 60}h ago"
+            minutes < 10080 -> "${minutes / 1440}d ago"
+            minutes < 43200 -> "${minutes / 10080}w ago"
+            else -> "${minutes / 43200}mo ago"
+        }
     }
 
     private fun getStatusIcon(status: TaskStatus): Icon = when (status) {
