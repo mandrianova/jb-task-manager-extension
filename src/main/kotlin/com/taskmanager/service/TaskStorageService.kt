@@ -86,6 +86,68 @@ class TaskStorageService(private val project: Project) {
         Files.createDirectories(getDocsPath())
     }
 
+    fun isInitialized(): Boolean = Files.exists(getTasksFilePath())
+
+    fun initializeProject() {
+        if (isInitialized()) return
+        ensureDirectories()
+        saveTasks(TaskData())
+    }
+
+    fun getSkillsSourceDir(): Path {
+        // Skills bundled with the plugin JAR are extracted to a temp dir,
+        // but we keep them in the repo under skills/ for distribution.
+        // Find the plugin's installation path or use a known location.
+        val pluginClassDir = this::class.java.protectionDomain?.codeSource?.location?.toURI()
+        if (pluginClassDir != null) {
+            val jarPath = Paths.get(pluginClassDir)
+            // Navigate from classes dir to project root: build/classes/kotlin/main -> project root
+            val projectRoot = jarPath.parent?.parent?.parent?.parent
+            val skillsDir = projectRoot?.resolve("skills")
+            if (skillsDir != null && Files.isDirectory(skillsDir)) {
+                return skillsDir
+            }
+        }
+        return Paths.get("") // fallback
+    }
+
+    fun installSkills(): Boolean {
+        val basePath = project.basePath ?: return false
+        val targetDir = Paths.get(basePath, ".claude", "skills")
+        val skills = mapOf(
+            "task-execute" to getSkillContent("task-execute"),
+            "task-create" to getSkillContent("task-create")
+        )
+
+        var installed = false
+        for ((name, content) in skills) {
+            if (content.isNotBlank()) {
+                val skillDir = targetDir.resolve(name)
+                Files.createDirectories(skillDir)
+                val skillFile = skillDir.resolve("SKILL.md")
+                if (!Files.exists(skillFile)) {
+                    Files.writeString(skillFile, content)
+                    installed = true
+                }
+            }
+        }
+        refreshVfs()
+        return installed
+    }
+
+    fun areSkillsInstalled(): Boolean {
+        val basePath = project.basePath ?: return false
+        val skillsDir = Paths.get(basePath, ".claude", "skills")
+        return Files.exists(skillsDir.resolve("task-execute/SKILL.md"))
+                && Files.exists(skillsDir.resolve("task-create/SKILL.md"))
+    }
+
+    private fun getSkillContent(skillName: String): String {
+        // Try to load from plugin resources
+        val stream = this::class.java.getResourceAsStream("/skills/$skillName/SKILL.md")
+        return stream?.bufferedReader()?.readText() ?: ""
+    }
+
     fun loadTasks(): TaskData {
         val path = getTasksFilePath()
         if (!Files.exists(path)) {

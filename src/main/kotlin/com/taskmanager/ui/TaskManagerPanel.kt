@@ -1,11 +1,10 @@
 package com.taskmanager.ui
 
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionToolbar
-import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
@@ -31,6 +30,11 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
 
     init {
         border = JBUI.Borders.empty()
+
+        // Auto-initialize project files on first open
+        if (!storageService.isInitialized()) {
+            storageService.initializeProject()
+        }
 
         // Toolbar
         val toolbar = createToolbar()
@@ -71,6 +75,44 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
             })
             add(createSimpleAction("Tracker Settings", AllIcons.General.GearPlain) {
                 TrackerSettingsDialog(project).show()
+            })
+            add(object : AnAction("Install Claude Skills", "Install task-execute and task-create skills into this project", AllIcons.Nodes.CopyOfFolder) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    if (storageService.areSkillsInstalled()) {
+                        Messages.showInfoMessage(
+                            project,
+                            "Claude skills are already installed in .claude/skills/",
+                            "Skills Installed"
+                        )
+                    } else {
+                        val installed = storageService.installSkills()
+                        if (installed) {
+                            Messages.showInfoMessage(
+                                project,
+                                "Skills installed to .claude/skills/\n\n" +
+                                    "• task-execute — run tasks from the task manager\n" +
+                                    "• task-create — create new tasks via Claude\n\n" +
+                                    "You can now use /task-execute and /task-create in Claude.",
+                                "Skills Installed"
+                            )
+                        } else {
+                            Messages.showErrorDialog(
+                                project,
+                                "Failed to install skills. Check that the plugin resources are intact.",
+                                "Installation Failed"
+                            )
+                        }
+                    }
+                }
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.icon = if (storageService.areSkillsInstalled())
+                        AllIcons.General.InspectionsOK
+                    else
+                        AllIcons.Nodes.CopyOfFolder
+                }
+
+                override fun getActionUpdateThread() = ActionUpdateThread.BGT
             })
         }
 
