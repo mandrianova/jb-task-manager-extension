@@ -26,6 +26,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.7.0</h3>
+        <ul>
+            <li>Add "Commands" tab — lists all Claude commands and skills from project and global .claude/</li>
+            <li>Run any command/skill with one click directly from the UI</li>
+            <li>Open source .md files of commands and skills in the editor</li>
+            <li>Commands grouped by scope: project commands, project skills, global commands, global skills</li>
+        </ul>
+
         <h3>1.6.0</h3>
         <ul>
             <li>Auto-initialize project task files on first plugin open</li>
@@ -88,6 +96,9 @@
 
         <projectService
             serviceImplementation="com.taskmanager.service.TaskStorageService"/>
+
+        <projectService
+            serviceImplementation="com.taskmanager.service.ClaudeSkillScanner"/>
 
         <fileEditorProvider
             implementation="com.taskmanager.ui.TaskManagerEditorProvider"/>

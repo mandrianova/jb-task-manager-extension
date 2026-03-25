@@ -14,6 +14,7 @@ A task management plugin for JetBrains IDEs (PyCharm, IntelliJ IDEA, WebStorm, e
 - **Auto-create issues:** When creating tasks, can automatically create issues in external trackers via MCP
 - **Smart ordering:** Completed groups sink to the bottom, appear faded, and auto-collapse
 - **Pagination** with configurable page size
+- **Commands tab:** Browse all Claude commands and skills (project, global, built-in) and run them with one click
 - **Multiple views:** Side panel, bottom panel, or editor tab (center area)
 - **Auto-archiving** of completed groups to keep `tasks.json` compact
 
@@ -80,6 +81,9 @@ After installing, the skills are available in Claude:
 | View details | Click the 📄 link on a task to open its markdown file |
 | Refresh | Click 🔄 in toolbar |
 | Configure tracker | Click ⚙ in toolbar |
+| Browse commands | Switch to the **Commands** tab in the tool window |
+| Run a command | Click ▶ on any command/skill in the Commands tab |
+| View command source | Click 👁 to open the `.md` file in the editor |
 
 ### External tracker integration
 
