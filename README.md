@@ -45,19 +45,23 @@ After restart, the **Task Manager** tab appears in the right side panel.
 
 ## Install Claude skills
 
-The plugin relies on two Claude Code skills for creating and executing tasks. Copy them to your global Claude skills directory:
+The plugin relies on two Claude Code skills for creating and executing tasks.
+
+### Option A: Install from the plugin UI (per-project)
+
+1. Open the **Task Manager** panel in the IDE
+2. Click the **Install Claude Skills** button (folder icon) in the toolbar
+3. Skills are copied to `<project>/.claude/skills/` — the button icon changes to ✅ when done
+
+### Option B: Install globally (all projects)
 
 ```bash
-# Create the skills directories
-mkdir -p ~/.claude/skills/task-execute
-mkdir -p ~/.claude/skills/task-create
-
-# Copy skill files from this repository
+mkdir -p ~/.claude/skills/task-execute ~/.claude/skills/task-create
 cp skills/task-execute/SKILL.md ~/.claude/skills/task-execute/SKILL.md
 cp skills/task-create/SKILL.md ~/.claude/skills/task-create/SKILL.md
 ```
 
-After copying, the skills are available globally in any project:
+After installing, the skills are available in Claude:
 
 - **`/task-execute <id>`** — Executes a task or group by ID. Follows a structured workflow: analyze → plan → implement → review → test → get feedback → commit → update status.
 - **`/task-create "Group" "Task" "Description"`** — Creates a new task group and/or task. Generates a markdown file with description, instructions, and acceptance criteria templates.
