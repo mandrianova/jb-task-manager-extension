@@ -10,5 +10,6 @@ data class Task(
     val status: TaskStatus = TaskStatus.NEW,
     val mdFile: String,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val commitId: String = ""
 )

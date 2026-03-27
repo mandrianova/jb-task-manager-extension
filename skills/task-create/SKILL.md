@@ -1,75 +1,62 @@
 ---
 name: task-create
-description: Create new tasks or task groups in the project task manager. Creates entries in .claude/tasks/tasks.json and markdown docs in .claude/tasks/docs/. Use when asked to plan, create, or add tasks.
+description: Create new tasks or task groups in the project task manager. Uses task-cli.sh for data operations. Use when asked to plan, create, or add tasks.
 ---
 
 # Task Create
 
 You create tasks in the project's task management system stored at `.claude/tasks/`.
 
+## CLI helper
+
+Use the `task-cli.sh` script for all task data operations:
+
+```bash
+# List existing groups
+bash .claude/tasks/task-cli.sh list
+
+# Create a new group (prints groupId)
+bash .claude/tasks/task-cli.sh add-group "Group Name"
+
+# Create a new task in a group (prints taskId, creates MD file)
+bash .claude/tasks/task-cli.sh add-task <groupId> "Task Name" "Optional description"
+
+# Get tracker config
+bash .claude/tasks/task-cli.sh config
+```
+
+If `task-cli.sh` is not found at `.claude/tasks/task-cli.sh`, copy it from the project's plugin repo:
+```bash
+cp scripts/task-cli.sh .claude/tasks/task-cli.sh
+```
+
 ## Input
 
-Arguments via `$ARGUMENTS` in this format:
-```
-"Group Name" "Task Name" "Optional description"
-```
-
-Examples:
+Arguments via `$ARGUMENTS` — parsed flexibly. Examples:
 - `/task-create "Backend API" "Add authentication" "Implement JWT auth flow"`
 - `/task-create "Refactoring" "Extract utils"`
-
-If only a group name is provided, create the group without tasks.
+- `/task-create` (no args — ask user interactively)
 
 ## Steps
 
-1. Ensure directories exist:
-   - `.claude/tasks/`
-   - `.claude/tasks/docs/`
+1. Check if `task-cli.sh` exists at `.claude/tasks/task-cli.sh`. If not, look for it at `scripts/task-cli.sh` and copy it.
 
-2. Read `.claude/tasks/tasks.json` (create with `{"groups": []}` if missing).
+2. List existing groups: `bash .claude/tasks/task-cli.sh list`
 
 3. Find or create the group:
-   - If a group with the given name exists, use it.
-   - Otherwise create a new group:
-     ```json
-     {
-       "id": "<8-char-uuid>",
-       "name": "<group name>",
-       "order": <next sequential number>,
-       "createdAt": "<ISO-8601 timestamp>",
-       "tasks": []
-     }
-     ```
-
-4. If a task name is provided, create the task:
-   ```json
-   {
-     "id": "<8-char-uuid>",
-     "name": "<task name>",
-     "description": "<description or empty string>",
-     "status": "new",
-     "mdFile": "<groupId>/<taskId>.md",
-     "createdAt": "<ISO-8601 timestamp>",
-     "updatedAt": "<ISO-8601 timestamp>"
-   }
+   ```bash
+   # If a group with this name exists, use its ID from the list output
+   # Otherwise create a new one:
+   GROUP_ID=$(bash .claude/tasks/task-cli.sh add-group "Group Name")
    ```
 
-5. Create the markdown file at `.claude/tasks/docs/<groupId>/<taskId>.md`:
-
-   ```markdown
-   # <task name>
-
-   ## Description
-   <description or "Add description here.">
-
-   ## Instructions
-   Add detailed instructions here.
-
-   ## Acceptance Criteria
-   - [ ] Define acceptance criteria
+4. Create the task(s):
+   ```bash
+   TASK_ID=$(bash .claude/tasks/task-cli.sh add-task "$GROUP_ID" "Task Name" "Description")
    ```
+   This automatically creates the markdown file at `.claude/tasks/docs/<groupId>/<taskId>.md`.
 
-6. Add task to the group's `tasks` array and save `tasks.json` with pretty-print formatting.
+5. If the user wants to add details to the MD file, edit it after creation.
 
 ## Output
 
@@ -83,67 +70,27 @@ Created:
 
 ## External tracker integration
 
-Check if `.claude/tasks/config.json` exists:
+Check tracker config: `bash .claude/tasks/task-cli.sh config`
 
-```json
-{
-  "type": "LINEAR",
-  "baseUrl": "https://linear.app/yourteam"
-}
-```
-
-Supported types: `LINEAR`, `JIRA`, `GITHUB_ISSUES`, `YOUTRACK`.
+If a tracker is configured (type is not `NONE`):
 
 When a user mentions an external issue ID (e.g. "ENG-123", "PROJ-42", "#15"):
 - Include the issue ID in the **group name** so the plugin can detect it and create a clickable link.
-- Example group name: `"ENG-123 Implement authentication"`
-- If the user provides just a tracker ID, ask what the task is about, or if context is clear, use the ID as a prefix.
+- Example: `bash .claude/tasks/task-cli.sh add-group "ENG-123 Implement authentication"`
 
 ## Auto-create issue in external tracker
 
 After creating the task group locally, check if:
 
-1. A tracker is configured in `.claude/tasks/config.json` (type is not `NONE`)
-2. You have access to the corresponding MCP tool for that tracker:
-   - **LINEAR**: Look for `save_issue` tool (Linear MCP). Create an issue with the group name as title and the task descriptions as body. Use the returned issue identifier (e.g. `ENG-123`) to **rename the group** so it includes the ID prefix.
-   - **JIRA**: Look for Jira MCP tools (`create_issue` or similar). Same approach — create issue, prepend returned key to group name.
-   - **GITHUB_ISSUES**: Look for GitHub MCP tools or use `gh issue create` CLI. Prepend `#<number>` to group name.
-   - **YOUTRACK**: Look for YouTrack MCP tools or CLI.
+1. A tracker is configured (type is not `NONE`)
+2. You have access to the corresponding MCP tool:
+   - **LINEAR**: Use `save_issue` tool. Prepend returned ID to group name.
+   - **JIRA**: Use Jira MCP tools. Prepend returned key to group name.
+   - **GITHUB_ISSUES**: Use `gh issue create` CLI. Prepend `#<number>`.
+   - **YOUTRACK**: Use YouTrack MCP tools or CLI.
 
-3. If the MCP tool is NOT available, skip external creation silently — just inform the user: "Note: No MCP connection to {tracker} found. Issue was not created in the external tracker."
-
-4. If the MCP tool IS available and issue creation succeeds, update the group name in `tasks.json` to include the external ID, e.g.:
-   - Before: `"Implement authentication"`
-   - After: `"ENG-123 Implement authentication"`
-
-This way the plugin will automatically detect the ID and show a clickable link.
+3. If no MCP tool available, inform the user and continue without external creation.
 
 ## Batch creation
 
 If the user provides multiple tasks at once, create them all in the same group. Parse the input flexibly — the user might list tasks in natural language.
-
-## Task JSON structure reference
-
-```json
-{
-  "groups": [
-    {
-      "id": "abcd1234",
-      "name": "Group Name",
-      "order": 1,
-      "createdAt": "2025-01-01T00:00:00Z",
-      "tasks": [
-        {
-          "id": "efgh5678",
-          "name": "Task Name",
-          "description": "Brief description",
-          "status": "new",
-          "mdFile": "abcd1234/efgh5678.md",
-          "createdAt": "2025-01-01T00:00:00Z",
-          "updatedAt": "2025-01-01T00:00:00Z"
-        }
-      ]
-    }
-  ]
-}
-```

@@ -77,6 +77,21 @@ class TaskItemPanel(
 
         add(leftPanel, BorderLayout.CENTER)
 
+        val rightPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 2, 0))
+        rightPanel.isOpaque = false
+
+        // Commit diff button (only if commitId is set)
+        if (task.commitId.isNotBlank()) {
+            val commitButton = JButton(AllIcons.Actions.Diff)
+            commitButton.toolTipText = "Show commit diff (${task.commitId.take(7)})"
+            commitButton.preferredSize = Dimension(28, 28)
+            commitButton.isBorderPainted = false
+            commitButton.isContentAreaFilled = false
+            commitButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            commitButton.addActionListener { showCommitDiff(task.commitId) }
+            rightPanel.add(commitButton)
+        }
+
         // Run button
         val runButton = JButton(AllIcons.Actions.Execute)
         runButton.toolTipText = "Run task with Claude"
@@ -85,13 +100,55 @@ class TaskItemPanel(
         runButton.isBorderPainted = false
         runButton.isContentAreaFilled = false
         runButton.addActionListener { onRunTask(task) }
-
-        val rightPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 2, 0))
-        rightPanel.isOpaque = false
         rightPanel.add(runButton)
+
         add(rightPanel, BorderLayout.EAST)
 
         isOpaque = false
+    }
+
+    private fun showCommitDiff(commitHash: String) {
+        try {
+            // Use VCS Log to navigate to the commit
+            val actionManager = com.intellij.openapi.actionSystem.ActionManager.getInstance()
+            val dataContext = com.intellij.openapi.actionSystem.impl.SimpleDataContext.builder()
+                .add(com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT, project)
+                .build()
+
+            // Open Git log and search for the commit
+            val toolWindowManager = com.intellij.openapi.wm.ToolWindowManager.getInstance(project)
+            val vcsToolWindow = toolWindowManager.getToolWindow("Version Control")
+                ?: toolWindowManager.getToolWindow("Git")
+
+            if (vcsToolWindow != null) {
+                vcsToolWindow.activate {
+                    // Navigate to commit in VCS log by selecting the Log tab
+                    // and filtering by hash — user can then see the diff
+                    val content = vcsToolWindow.contentManager.contents
+                        .firstOrNull { it.displayName?.contains("Log", ignoreCase = true) == true }
+                    if (content != null) {
+                        vcsToolWindow.contentManager.setSelectedContent(content)
+                    }
+                }
+            }
+
+            // Also copy hash to clipboard for easy use
+            val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+            clipboard.setContents(java.awt.datatransfer.StringSelection(commitHash), null)
+
+            // Show notification
+            com.intellij.openapi.ui.Messages.showInfoMessage(
+                project,
+                "Commit hash copied to clipboard: ${commitHash.take(7)}\n\n" +
+                    "The Git Log panel is now open — paste the hash\n" +
+                    "in the search field to find this commit.",
+                "Commit: ${commitHash.take(7)}"
+            )
+        } catch (_: Exception) {
+            // Fallback: just copy hash
+            val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+            clipboard.setContents(java.awt.datatransfer.StringSelection(commitHash), null)
+        }
     }
 
     private fun openMdFile() {

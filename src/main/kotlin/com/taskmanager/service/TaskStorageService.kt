@@ -131,6 +131,19 @@ class TaskStorageService(private val project: Project) {
                 }
             }
         }
+
+        // Also install task-cli.sh into .claude/tasks/
+        val cliScript = getResourceContent("/scripts/task-cli.sh")
+        if (cliScript.isNotBlank()) {
+            ensureDirectories()
+            val cliTarget = getTasksBasePath().resolve("task-cli.sh")
+            if (!Files.exists(cliTarget)) {
+                Files.writeString(cliTarget, cliScript)
+                cliTarget.toFile().setExecutable(true)
+                installed = true
+            }
+        }
+
         refreshVfs()
         return installed
     }
@@ -143,8 +156,11 @@ class TaskStorageService(private val project: Project) {
     }
 
     private fun getSkillContent(skillName: String): String {
-        // Try to load from plugin resources
-        val stream = this::class.java.getResourceAsStream("/skills/$skillName/SKILL.md")
+        return getResourceContent("/skills/$skillName/SKILL.md")
+    }
+
+    private fun getResourceContent(path: String): String {
+        val stream = this::class.java.getResourceAsStream(path)
         return stream?.bufferedReader()?.readText() ?: ""
     }
 

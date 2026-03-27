@@ -26,6 +26,15 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.8.0</h3>
+        <ul>
+            <li>Commit tracking: tasks can store a commit hash, shown as a diff button in the UI</li>
+            <li>CLI helper script (task-cli.sh) for agents to list, create, update tasks without raw JSON</li>
+            <li>Skills updated to use task-cli.sh — faster and less error-prone</li>
+            <li>Install Skills now also copies task-cli.sh to .claude/tasks/</li>
+            <li>Git4Idea integration for viewing commit diffs</li>
+        </ul>
+
         <h3>1.7.0</h3>
         <ul>
             <li>Add "Commands" tab — lists all Claude commands and skills from project and global .claude/</li>
@@ -87,6 +96,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.plugins.terminal</depends>
+    <depends>Git4Idea</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Task Manager"
