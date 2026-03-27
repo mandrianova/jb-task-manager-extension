@@ -76,6 +76,11 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
             add(createSimpleAction("Tracker Settings", AllIcons.General.GearPlain) {
                 TrackerSettingsDialog(project).show()
             })
+            add(createSimpleAction("Setup Permissions", AllIcons.Nodes.SecurityRole) {
+                ApplicationManager.getApplication().invokeLater {
+                    TerminalHelper.runClaudeSkill(project, "task-setup", "", "Setup Permissions")
+                }
+            })
             add(object : AnAction("Install Claude Skills", "Install task-execute and task-create skills into this project", AllIcons.Nodes.CopyOfFolder) {
                 override fun actionPerformed(e: AnActionEvent) {
                     if (storageService.areSkillsInstalled()) {

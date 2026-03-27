@@ -66,28 +66,12 @@ cp skills/task-create/SKILL.md ~/.claude/skills/task-create/SKILL.md
 
 ### Configure permissions (optional)
 
-To let Claude run task management commands without repeated prompts, create `.claude/settings.local.json` in your project:
+To let Claude run task management commands without repeated prompts, either:
 
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(bash .claude/tasks/task-cli.sh:*)",
-      "Bash(git log:*)",
-      "Bash(git rev-parse:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git diff:*)",
-      "Bash(git status:*)",
-      "Read(.claude/tasks/**)",
-      "Edit(.claude/tasks/**)",
-      "Write(.claude/tasks/**)"
-    ]
-  }
-}
-```
+- Click the **Setup Permissions** button (🔒) in the Task Manager toolbar — it runs `/task-setup` which creates `.claude/settings.local.json` with the right rules
+- Or run `/task-setup` manually in Claude
 
-This file is gitignored and local to your machine. Add more rules as needed for your project (e.g. `Bash(./gradlew:*)`, `Bash(npm:*)`, `Bash(pytest:*)`).
+This creates a gitignored `.claude/settings.local.json` with permissions for `task-cli.sh`, git, and `.claude/tasks/` file operations. Add more rules as needed (e.g. `Bash(./gradlew:*)`, `Bash(npm:*)`).
 
 After installing, the skills are available in Claude:
 

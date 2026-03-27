@@ -26,6 +26,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.10.0</h3>
+        <ul>
+            <li>New /task-setup skill — configures permissions for the project in one command</li>
+            <li>"Setup Permissions" button in the toolbar — runs /task-setup via Claude</li>
+            <li>Removed per-call permissions check from task-execute skill</li>
+        </ul>
+
         <h3>1.9.0</h3>
         <ul>
             <li>CLI list now includes tracker config — eliminates separate config call</li>

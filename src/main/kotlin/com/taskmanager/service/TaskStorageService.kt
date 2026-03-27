@@ -117,7 +117,8 @@ class TaskStorageService(private val project: Project) {
         val targetDir = Paths.get(basePath, ".claude", "skills")
         val skills = mapOf(
             "task-execute" to getSkillContent("task-execute"),
-            "task-create" to getSkillContent("task-create")
+            "task-create" to getSkillContent("task-create"),
+            "task-setup" to getSkillContent("task-setup")
         )
 
         var installed = false
