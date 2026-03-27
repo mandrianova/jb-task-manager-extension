@@ -6,9 +6,6 @@
         <p>Task management plugin with Claude Code integration for tracking and executing
         project tasks directly from the IDE.</p>
 
-        <img src="https://raw.githubusercontent.com/nickaigi/jb-task-manager-extension/main/docs/screenshots/tasks-panel.png"
-             alt="Tasks panel" width="400"/>
-
         <h3>Features</h3>
         <ul>
             <li>Organize tasks into collapsible groups with automatic status tracking</li>
