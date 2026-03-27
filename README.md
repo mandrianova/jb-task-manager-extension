@@ -20,6 +20,21 @@ A task management plugin for JetBrains IDEs (PyCharm, IntelliJ IDEA, WebStorm, e
 - **Multiple views:** Side panel, bottom panel, or editor tab (center area)
 - **Auto-archiving** of completed groups to keep `tasks.json` compact
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/tasks-panel.png" width="320" alt="Tasks panel"/><br/>
+      <sub><b>Tasks panel</b> — groups, statuses, timestamps, commit links</sub>
+    </td>
+    <td align="center">
+      <img src="docs/screenshots/commands-panel.png" width="320" alt="Commands panel"/><br/>
+      <sub><b>Commands tab</b> — browse and run Claude commands and skills</sub>
+    </td>
+  </tr>
+</table>
+
 ## Requirements
 
 - JetBrains IDE 2025.3+ (PyCharm, IntelliJ IDEA, WebStorm, etc.)

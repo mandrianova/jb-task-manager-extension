@@ -6,15 +6,22 @@
         <p>Task management plugin with Claude Code integration for tracking and executing
         project tasks directly from the IDE.</p>
 
+        <img src="https://raw.githubusercontent.com/nickaigi/jb-task-manager-extension/main/docs/screenshots/tasks-panel.png"
+             alt="Tasks panel" width="400"/>
+
         <h3>Features</h3>
         <ul>
             <li>Organize tasks into collapsible groups with automatic status tracking</li>
             <li>Task statuses: New, In Progress, Completed, Paused, Cancelled</li>
+            <li>Each task shows how long ago it was opened and last updated</li>
             <li>Each task links to a Markdown file with detailed description and instructions</li>
             <li>Run tasks via Claude Code — opens a terminal with <code>/task-execute</code> skill</li>
             <li>Create tasks from the UI or via <code>/task-create</code> Claude skill</li>
+            <li>Commit tracking — attach a commit hash to a completed task and view its diff in Git Log</li>
+            <li>External tracker links — detects Linear, Jira, GitHub Issues, YouTrack IDs in group names</li>
             <li>Completed groups auto-collapse and fade, sinking to the bottom of the list</li>
             <li>Pagination with configurable page size</li>
+            <li>Commands tab — browse and run all Claude commands and skills in the project</li>
             <li>Available as a side panel, bottom panel, or editor tab</li>
             <li>Auto-archiving of completed groups to keep the task file compact</li>
         </ul>
