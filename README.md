@@ -78,7 +78,10 @@ To let Claude run task management commands without repeated prompts, create `.cl
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git diff:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Read(.claude/tasks:*)",
+      "Edit(.claude/tasks:*)",
+      "Write(.claude/tasks:*)"
     ]
   }
 }
