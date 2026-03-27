@@ -3,14 +3,16 @@
 # Used by Claude skills to avoid reading/writing raw JSON manually.
 #
 # Usage:
-#   task-cli.sh list                           — list all groups and tasks (compact)
-#   task-cli.sh list --group <groupId>         — list tasks in a specific group
-#   task-cli.sh get <taskId|groupId>           — get full details of a task or group
-#   task-cli.sh status <taskId> <status>       — update task status (new|in_progress|completed|paused|cancelled)
-#   task-cli.sh commit <taskId> <commitHash>   — attach a commit hash to a task
-#   task-cli.sh add-group <name>               — create a new group, prints groupId
-#   task-cli.sh add-task <groupId> <name> [description] — create a new task, prints taskId
-#   task-cli.sh config                         — show tracker config
+#   task-cli.sh list [--group <id>] [--status <s>] [--all]  — list groups/tasks (includes config)
+#   task-cli.sh get <taskId|groupId>                        — get full details of a task or group
+#   task-cli.sh status <taskId> <status>                    — update task status
+#   task-cli.sh commit <taskId> <commitHash>                — attach a commit hash to a task
+#   task-cli.sh add-group <name>                            — create a new group, prints groupId
+#   task-cli.sh add-task <groupId> <name> [description]     — create a new task, prints taskId
+#   task-cli.sh config                                      — show tracker config
+#
+# list defaults to active tasks only (new, in_progress, paused).
+# Use --all to include completed and cancelled. Use --status <s> to filter by one status.
 
 set -euo pipefail
 
@@ -38,44 +40,76 @@ now_iso() {
 cmd_list() {
     ensure_dirs
     local group_filter=""
-    if [ "${1:-}" = "--group" ] && [ -n "${2:-}" ]; then
-        group_filter="$2"
-    fi
+    local status_filter=""
+    local show_all=false
 
-    if [ -n "$group_filter" ]; then
-        python3 -c "
-import json, sys
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --group)  group_filter="$2"; shift 2 ;;
+            --status) status_filter="$2"; shift 2 ;;
+            --all)    show_all=true; shift ;;
+            *)        shift ;;
+        esac
+    done
+
+    python3 -c "
+import json, os
+
 with open('$TASKS_FILE') as f:
     data = json.load(f)
-for g in data['groups']:
-    if g['id'] == '$group_filter':
-        print(f\"Group: {g['name']} [{g['id']}] ({len(g['tasks'])} tasks)\")
-        for t in g['tasks']:
-            commit = f\" commit:{t.get('commitId','')}\" if t.get('commitId') else ''
-            print(f\"  [{t['status']:12s}] {t['name']} [{t['id']}]{commit}\")
-        break
-else:
-    print('Group not found', file=sys.stderr); sys.exit(1)
-"
-    else
-        python3 -c "
-import json
-with open('$TASKS_FILE') as f:
-    data = json.load(f)
-if not data['groups']:
+
+# Config
+config = {'type': 'NONE', 'baseUrl': ''}
+if os.path.exists('$CONFIG_FILE'):
+    with open('$CONFIG_FILE') as f:
+        config = json.load(f)
+if config.get('type', 'NONE') != 'NONE':
+    print(f\"Tracker: {config['type']} ({config.get('baseUrl', '')})\")
+    print()
+
+group_filter = '$group_filter'
+status_filter = '$status_filter'
+show_all = $( [ "$show_all" = true ] && echo True || echo False )
+active_statuses = {'new', 'in_progress', 'paused'}
+
+groups = data['groups']
+if group_filter:
+    groups = [g for g in groups if g['id'] == group_filter]
+    if not groups:
+        print('Group not found'); exit(1)
+
+if not groups:
     print('No groups found.')
-for g in data['groups']:
+    exit(0)
+
+for g in groups:
+    tasks = g['tasks']
+    if status_filter:
+        tasks = [t for t in tasks if t['status'] == status_filter]
+    elif not show_all:
+        tasks = [t for t in tasks if t['status'] in active_statuses]
+
+    # Skip empty groups after filtering (unless showing all)
+    total = len(g['tasks'])
+    shown = len(tasks)
+    hidden = total - shown
+
     statuses = {}
     for t in g['tasks']:
         s = t['status']
         statuses[s] = statuses.get(s, 0) + 1
     status_str = ', '.join(f'{v} {k}' for k, v in statuses.items())
-    print(f\"Group: {g['name']} [{g['id']}] ({len(g['tasks'])} tasks: {status_str})\")
-    for t in g['tasks']:
-        commit = f\" commit:{t.get('commitId','')}\" if t.get('commitId') else ''
-        print(f\"  [{t['status']:12s}] {t['name']} [{t['id']}]{commit}\")
+
+    suffix = f' (showing {shown}/{total})' if hidden > 0 else ''
+    print(f\"Group: {g['name']} [{g['id']}] ({total} tasks: {status_str}){suffix}\")
+    for t in tasks:
+        commit = f' commit:{t.get(\"commitId\",\"\")}' if t.get('commitId') else ''
+        md = t.get('mdFile', '')
+        print(f\"  [{t['status']:12s}] {t['name']} [{t['id']}] md:{md}{commit}\")
+    if hidden > 0:
+        print(f'  ... {hidden} tasks hidden (use --all to show)')
+    print()
 "
-    fi
 }
 
 cmd_get() {
@@ -261,7 +295,8 @@ case "${1:-help}" in
         echo "Usage: task-cli.sh <command> [args]"
         echo ""
         echo "Commands:"
-        echo "  list [--group <id>]                  List groups and tasks"
+        echo "  list [--group <id>] [--status <s>] [--all]  List groups and tasks"
+        echo "        (default: active only, use --all for all)"
         echo "  get <id>                             Get task or group details"
         echo "  status <taskId> <status>             Update task status"
         echo "  commit <taskId> <hash>               Attach commit hash to task"

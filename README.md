@@ -119,14 +119,19 @@ All task data lives inside the project, in a directory ignored by git:
 The `task-cli.sh` script allows Claude to manage tasks without reading/writing raw JSON:
 
 ```bash
-bash .claude/tasks/task-cli.sh list                          # list all groups and tasks
-bash .claude/tasks/task-cli.sh get <id>                      # get task or group details (JSON)
+bash .claude/tasks/task-cli.sh list                          # active tasks + tracker config
+bash .claude/tasks/task-cli.sh list --all                    # all tasks including completed
+bash .claude/tasks/task-cli.sh list --group <id>             # tasks in a specific group
+bash .claude/tasks/task-cli.sh list --status in_progress     # filter by status
+bash .claude/tasks/task-cli.sh get <id>                      # task or group details (JSON)
 bash .claude/tasks/task-cli.sh status <taskId> completed     # update task status
 bash .claude/tasks/task-cli.sh commit <taskId> <hash>        # attach commit hash
 bash .claude/tasks/task-cli.sh add-group "Group Name"        # create group (prints ID)
 bash .claude/tasks/task-cli.sh add-task <gid> "Name" "Desc"  # create task (prints ID)
 bash .claude/tasks/task-cli.sh config                        # show tracker config
 ```
+
+By default, `list` shows only active tasks (new, in\_progress, paused) and includes tracker config at the top — no need to call `config` separately.
 
 ## Development
 

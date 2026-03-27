@@ -12,13 +12,19 @@ You are executing tasks from the project's task management system.
 Use the `task-cli.sh` script for all task data operations instead of reading/writing JSON manually:
 
 ```bash
-# List all groups and tasks
+# List active tasks (includes tracker config at the top)
 bash .claude/tasks/task-cli.sh list
 
-# List tasks in a specific group
+# List tasks in a specific group (active only by default)
 bash .claude/tasks/task-cli.sh list --group <groupId>
 
-# Get full details of a task or group
+# List ALL tasks including completed/cancelled
+bash .claude/tasks/task-cli.sh list --all
+
+# Filter by specific status
+bash .claude/tasks/task-cli.sh list --status in_progress
+
+# Get full JSON details of a task or group
 bash .claude/tasks/task-cli.sh get <id>
 
 # Update task status
@@ -29,15 +35,11 @@ bash .claude/tasks/task-cli.sh commit <taskId> <commitHash>
 
 # Create a new subtask
 bash .claude/tasks/task-cli.sh add-task <groupId> "<name>" "<description>"
-
-# Get tracker config
-bash .claude/tasks/task-cli.sh config
 ```
 
-If `task-cli.sh` is not found at `.claude/tasks/task-cli.sh`, check the project root at `scripts/task-cli.sh` and copy it:
-```bash
-cp scripts/task-cli.sh .claude/tasks/task-cli.sh
-```
+**Note:** `list` outputs tracker config automatically — no need to call `config` separately.
+
+If `task-cli.sh` is not found at `.claude/tasks/task-cli.sh`, check `scripts/task-cli.sh` and copy it.
 
 ## Input
 
@@ -45,11 +47,10 @@ You receive a single argument via `$ARGUMENTS`: either a **group ID** or a **tas
 
 ## Finding the task
 
-1. Run `bash .claude/tasks/task-cli.sh get <id>` to find the task or group.
-2. If a **group ID** — run `bash .claude/tasks/task-cli.sh list --group <id>` to see all tasks, then process ones with status `new` or `in_progress` in order.
-3. If a **task ID** — process that specific task.
-4. Run `bash .claude/tasks/task-cli.sh config` to check for an external tracker.
-5. If the ID is not found, run `bash .claude/tasks/task-cli.sh list` to show all available IDs.
+1. Run `bash .claude/tasks/task-cli.sh list --group <id>` to see the group's active tasks and tracker config in one call.
+2. If a **group ID** — process tasks with status `new` or `in_progress` in order.
+3. If a **task ID** — run `bash .claude/tasks/task-cli.sh get <id>` to get its details.
+4. If the ID is not found, run `bash .claude/tasks/task-cli.sh list` to show all available IDs.
 
 ## External tracker integration
 
@@ -95,7 +96,9 @@ For each task, follow these stages strictly in order:
 3. If the user requests changes — go back to **Stage 2**, make adjustments, re-run checks.
 4. Repeat until the user explicitly approves.
 
-### Stage 4: Commit
+### Stage 4: Commit (if applicable)
+
+**Skip this stage** if the task has no code changes (e.g. analysis, research, documentation-only tasks, or config changes that don't need a commit). Go directly to Stage 5.
 
 1. **Learn the project's commit style** before committing:
    - Run `git log --oneline -20` to see recent commit messages.
@@ -113,7 +116,7 @@ For each task, follow these stages strictly in order:
 ### Stage 5: Completion
 
 1. Update status: `bash .claude/tasks/task-cli.sh status <taskId> completed`
-2. Append a `## Result` section to the task's MD file with a summary of what was done and the commit hash.
+2. Append a `## Result` section to the task's MD file with a summary of what was done (and the commit hash if applicable).
 
 ## Creating subtasks
 

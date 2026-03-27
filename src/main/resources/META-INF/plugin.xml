@@ -26,6 +26,16 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.9.0</h3>
+        <ul>
+            <li>CLI list now includes tracker config — eliminates separate config call</li>
+            <li>Filter tasks by status: --status, --all flags (default: active only)</li>
+            <li>list output includes md file path for each task</li>
+            <li>Fix task-cli.sh not bundled in plugin JAR</li>
+            <li>Fix VFS refresh triggering full project reindexing</li>
+            <li>Tasks can be completed without a commit (analysis, research tasks)</li>
+        </ul>
+
         <h3>1.8.0</h3>
         <ul>
             <li>Commit tracking: tasks can store a commit hash, shown as a diff button in the UI</li>

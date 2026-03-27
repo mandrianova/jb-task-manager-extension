@@ -12,7 +12,7 @@ You create tasks in the project's task management system stored at `.claude/task
 Use the `task-cli.sh` script for all task data operations:
 
 ```bash
-# List existing groups
+# List existing groups and active tasks (includes tracker config)
 bash .claude/tasks/task-cli.sh list
 
 # Create a new group (prints groupId)
@@ -20,15 +20,11 @@ bash .claude/tasks/task-cli.sh add-group "Group Name"
 
 # Create a new task in a group (prints taskId, creates MD file)
 bash .claude/tasks/task-cli.sh add-task <groupId> "Task Name" "Optional description"
-
-# Get tracker config
-bash .claude/tasks/task-cli.sh config
 ```
 
-If `task-cli.sh` is not found at `.claude/tasks/task-cli.sh`, copy it from the project's plugin repo:
-```bash
-cp scripts/task-cli.sh .claude/tasks/task-cli.sh
-```
+**Note:** `list` outputs tracker config automatically — no need to call `config` separately.
+
+If `task-cli.sh` is not found at `.claude/tasks/task-cli.sh`, copy it from `scripts/task-cli.sh`.
 
 ## Input
 
@@ -70,9 +66,7 @@ Created:
 
 ## External tracker integration
 
-Check tracker config: `bash .claude/tasks/task-cli.sh config`
-
-If a tracker is configured (type is not `NONE`):
+The `list` command shows tracker config at the top of its output. If a tracker is configured (type is not `NONE`):
 
 When a user mentions an external issue ID (e.g. "ENG-123", "PROJ-42", "#15"):
 - Include the issue ID in the **group name** so the plugin can detect it and create a clickable link.
