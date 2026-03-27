@@ -112,7 +112,7 @@ class TaskStorageService(private val project: Project) {
         return Paths.get("") // fallback
     }
 
-    fun installSkills(): Boolean {
+    fun installSkills(overwrite: Boolean = false): Boolean {
         val basePath = project.basePath ?: return false
         val targetDir = Paths.get(basePath, ".claude", "skills")
         val skills = mapOf(
@@ -121,33 +121,33 @@ class TaskStorageService(private val project: Project) {
             "task-setup" to getSkillContent("task-setup")
         )
 
-        var installed = false
+        var changed = false
         for ((name, content) in skills) {
             if (content.isNotBlank()) {
                 val skillDir = targetDir.resolve(name)
                 Files.createDirectories(skillDir)
                 val skillFile = skillDir.resolve("SKILL.md")
-                if (!Files.exists(skillFile)) {
+                if (!Files.exists(skillFile) || overwrite) {
                     Files.writeString(skillFile, content)
-                    installed = true
+                    changed = true
                 }
             }
         }
 
-        // Also install task-cli.sh into .claude/tasks/
+        // Also install/update task-cli.sh into .claude/tasks/
         val cliScript = getResourceContent("/scripts/task-cli.sh")
         if (cliScript.isNotBlank()) {
             ensureDirectories()
             val cliTarget = getTasksBasePath().resolve("task-cli.sh")
-            if (!Files.exists(cliTarget)) {
+            if (!Files.exists(cliTarget) || overwrite) {
                 Files.writeString(cliTarget, cliScript)
                 cliTarget.toFile().setExecutable(true)
-                installed = true
+                changed = true
             }
         }
 
         refreshVfs()
-        return installed
+        return changed
     }
 
     fun areSkillsInstalled(): Boolean {

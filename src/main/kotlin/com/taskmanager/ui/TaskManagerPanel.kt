@@ -81,32 +81,42 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
                     TerminalHelper.runClaudeSkill(project, "task-setup", "", "Setup Permissions")
                 }
             })
-            add(object : AnAction("Install Claude Skills", "Install task-execute and task-create skills into this project", AllIcons.Nodes.CopyOfFolder) {
+            add(object : AnAction("Install / Update Claude Skills", "Install or update task skills and task-cli.sh", AllIcons.Nodes.CopyOfFolder) {
                 override fun actionPerformed(e: AnActionEvent) {
-                    if (storageService.areSkillsInstalled()) {
+                    val alreadyInstalled = storageService.areSkillsInstalled()
+                    if (alreadyInstalled) {
+                        val choice = Messages.showYesNoDialog(
+                            project,
+                            "Skills are already installed. Overwrite with the latest version from the plugin?",
+                            "Update Skills",
+                            "Update",
+                            "Cancel",
+                            AllIcons.General.QuestionDialog
+                        )
+                        if (choice != Messages.YES) return
+                    }
+
+                    val changed = storageService.installSkills(overwrite = alreadyInstalled)
+                    if (changed) {
+                        val verb = if (alreadyInstalled) "updated" else "installed"
                         Messages.showInfoMessage(
                             project,
-                            "Claude skills are already installed in .claude/skills/",
-                            "Skills Installed"
+                            "Skills $verb in .claude/skills/\n\n" +
+                                "• task-execute\n• task-create\n• task-setup\n• task-cli.sh",
+                            "Skills ${verb.replaceFirstChar { it.uppercase() }}"
+                        )
+                    } else if (!alreadyInstalled) {
+                        Messages.showErrorDialog(
+                            project,
+                            "Failed to install skills. Check that the plugin resources are intact.",
+                            "Installation Failed"
                         )
                     } else {
-                        val installed = storageService.installSkills()
-                        if (installed) {
-                            Messages.showInfoMessage(
-                                project,
-                                "Skills installed to .claude/skills/\n\n" +
-                                    "• task-execute — run tasks from the task manager\n" +
-                                    "• task-create — create new tasks via Claude\n\n" +
-                                    "You can now use /task-execute and /task-create in Claude.",
-                                "Skills Installed"
-                            )
-                        } else {
-                            Messages.showErrorDialog(
-                                project,
-                                "Failed to install skills. Check that the plugin resources are intact.",
-                                "Installation Failed"
-                            )
-                        }
+                        Messages.showInfoMessage(
+                            project,
+                            "Skills are already up to date.",
+                            "No Changes"
+                        )
                     }
                 }
 
