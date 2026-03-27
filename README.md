@@ -12,6 +12,8 @@ A task management plugin for JetBrains IDEs (PyCharm, IntelliJ IDEA, WebStorm, e
 - **Claude integration:** Run tasks via `/task-execute` and create them via `/task-create` skills
 - **External tracker links:** Detects Linear, Jira, GitHub Issues, and YouTrack IDs in group names and renders clickable links
 - **Auto-create issues:** When creating tasks, can automatically create issues in external trackers via MCP
+- **Commit tracking:** Tasks store commit hashes with a diff button to view changes in Git Log
+- **CLI helper:** `task-cli.sh` script for agents to manage tasks without parsing raw JSON
 - **Smart ordering:** Completed groups sink to the bottom, appear faded, and auto-collapse
 - **Pagination** with configurable page size
 - **Commands tab:** Browse all Claude commands and skills (project, global, built-in) and run them with one click
@@ -52,7 +54,7 @@ The plugin relies on two Claude Code skills for creating and executing tasks.
 
 1. Open the **Task Manager** panel in the IDE
 2. Click the **Install Claude Skills** button (folder icon) in the toolbar
-3. Skills are copied to `<project>/.claude/skills/` — the button icon changes to ✅ when done
+3. Skills and `task-cli.sh` are copied to `<project>/.claude/` — the button icon changes to ✅ when done
 
 ### Option B: Install globally (all projects)
 
@@ -79,6 +81,7 @@ After installing, the skills are available in Claude:
 | Create task | Click **+** in toolbar or **+ New Group / Task** at the bottom — opens Claude with `/task-create` |
 | Run task | Click the ▶ play button on a task or group — opens Claude with `/task-execute` |
 | View details | Click the 📄 link on a task to open its markdown file |
+| View commit diff | Click the diff icon on a completed task to open its commit in Git Log |
 | Refresh | Click 🔄 in toolbar |
 | Configure tracker | Click ⚙ in toolbar |
 | Browse commands | Switch to the **Commands** tab in the tool window |
@@ -105,9 +108,24 @@ All task data lives inside the project, in a directory ignored by git:
 ├── tasks.json        # Active groups and tasks
 ├── archive.json      # Auto-archived completed groups
 ├── config.json       # Tracker settings (type, base URL)
+├── task-cli.sh       # CLI helper for agents
 └── docs/             # Markdown files with task details
     └── <groupId>/
         └── <taskId>.md
+```
+
+### CLI helper for agents
+
+The `task-cli.sh` script allows Claude to manage tasks without reading/writing raw JSON:
+
+```bash
+bash .claude/tasks/task-cli.sh list                          # list all groups and tasks
+bash .claude/tasks/task-cli.sh get <id>                      # get task or group details (JSON)
+bash .claude/tasks/task-cli.sh status <taskId> completed     # update task status
+bash .claude/tasks/task-cli.sh commit <taskId> <hash>        # attach commit hash
+bash .claude/tasks/task-cli.sh add-group "Group Name"        # create group (prints ID)
+bash .claude/tasks/task-cli.sh add-task <gid> "Name" "Desc"  # create task (prints ID)
+bash .claude/tasks/task-cli.sh config                        # show tracker config
 ```
 
 ## Development
