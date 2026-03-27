@@ -153,6 +153,7 @@ class TaskStorageService(private val project: Project) {
         val skillsDir = Paths.get(basePath, ".claude", "skills")
         return Files.exists(skillsDir.resolve("task-execute/SKILL.md"))
                 && Files.exists(skillsDir.resolve("task-create/SKILL.md"))
+                && Files.exists(getTasksBasePath().resolve("task-cli.sh"))
     }
 
     private fun getSkillContent(skillName: String): String {
