@@ -69,6 +69,7 @@ class TaskItemPanel(
             timeRow.border = JBUI.Borders.emptyLeft(22) // align with name
 
             val timeLabel = JBLabel(timeText)
+            timeLabel.toolTipText = "createdAt=${task.createdAt} updatedAt=${task.updatedAt} now=${Instant.now()}"
             timeLabel.font = timeLabel.font.deriveFont(Font.PLAIN, 10f)
             timeLabel.foreground = UIUtil.getContextHelpForeground()
             timeRow.add(timeLabel)
@@ -168,7 +169,8 @@ class TaskItemPanel(
             val parts = mutableListOf<String>()
             parts.add("opened ${formatRelativeTime(created, now)}")
 
-            if (created != updated) {
+            // Show "updated" only if it's actually after createdAt and different
+            if (updated.isAfter(created)) {
                 parts.add("updated ${formatRelativeTime(updated, now)}")
             }
 
@@ -180,6 +182,7 @@ class TaskItemPanel(
 
     private fun formatRelativeTime(instant: Instant, now: Instant): String {
         val minutes = ChronoUnit.MINUTES.between(instant, now)
+        if (minutes < 0) return "just now" // future timestamp, treat as now
         return when {
             minutes < 1 -> "just now"
             minutes < 60 -> "${minutes}m ago"
