@@ -9,7 +9,7 @@ You create tasks in the project's task management system stored at `.claude/task
 
 ## CLI helper
 
-Use the `task-cli.sh` script for all task data operations:
+**IMPORTANT:** Always use the **relative path** `bash .claude/tasks/task-cli.sh` — never an absolute path. This ensures permission rules match correctly.
 
 ```bash
 # List existing groups and active tasks (includes tracker config)

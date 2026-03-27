@@ -9,7 +9,7 @@ You are executing tasks from the project's task management system.
 
 ## CLI helper
 
-Use the `task-cli.sh` script for all task data operations instead of reading/writing JSON manually:
+**IMPORTANT:** Always use the **relative path** `bash .claude/tasks/task-cli.sh` — never an absolute path. This ensures permission rules match correctly.
 
 ```bash
 # List active tasks (includes tracker config at the top)
@@ -55,7 +55,10 @@ Before starting, check if `.claude/settings.local.json` exists. If it doesn't, s
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git diff:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Read(.claude/tasks/**)",
+      "Edit(.claude/tasks/**)",
+      "Write(.claude/tasks/**)"
     ]
   }
 }
