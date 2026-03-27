@@ -64,6 +64,28 @@ cp skills/task-execute/SKILL.md ~/.claude/skills/task-execute/SKILL.md
 cp skills/task-create/SKILL.md ~/.claude/skills/task-create/SKILL.md
 ```
 
+### Configure permissions (optional)
+
+To let Claude run task management commands without repeated prompts, create `.claude/settings.local.json` in your project:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash .claude/tasks/task-cli.sh:*)",
+      "Bash(git log:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)"
+    ]
+  }
+}
+```
+
+This file is gitignored and local to your machine. Add more rules as needed for your project (e.g. `Bash(./gradlew:*)`, `Bash(npm:*)`, `Bash(pytest:*)`).
+
 After installing, the skills are available in Claude:
 
 - **`/task-execute <id>`** — Executes a task or group by ID. Follows a structured workflow: analyze → plan → implement → review → test → get feedback → commit → update status.

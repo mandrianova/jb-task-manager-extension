@@ -41,6 +41,30 @@ bash .claude/tasks/task-cli.sh add-task <groupId> "<name>" "<description>"
 
 If `task-cli.sh` is not found at `.claude/tasks/task-cli.sh`, check `scripts/task-cli.sh` and copy it.
 
+## Permissions check
+
+Before starting, check if `.claude/settings.local.json` exists. If it doesn't, suggest the user create it with the recommended permissions:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash .claude/tasks/task-cli.sh:*)",
+      "Bash(git log:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git diff:*)",
+      "Bash(git status:*)"
+    ]
+  }
+}
+```
+
+Tell the user: "To avoid repeated permission prompts, I can create `.claude/settings.local.json` with task management permissions. Want me to do that?"
+
+If the user agrees, create the file. If the file already exists, do not modify it. Only suggest this once per session.
+
 ## Input
 
 You receive a single argument via `$ARGUMENTS`: either a **group ID** or a **task ID** (8-character string).
