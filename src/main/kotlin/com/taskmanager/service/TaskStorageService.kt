@@ -2,6 +2,7 @@ package com.taskmanager.service
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
@@ -308,7 +309,10 @@ class TaskStorageService(private val project: Project) {
     }
 
     private fun refreshVfs() {
-        VirtualFileManager.getInstance().asyncRefresh {}
+        // Refresh only the tasks directory instead of the entire VFS
+        // to avoid triggering full project reindexing
+        val tasksDir = getTasksBasePath().toFile()
+        LocalFileSystem.getInstance().refreshIoFiles(listOf(tasksDir), true, true, null)
     }
 
     private fun shortUuid(): String = UUID.randomUUID().toString().substring(0, 8)

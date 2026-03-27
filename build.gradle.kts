@@ -31,6 +31,10 @@ dependencies {
     }
 }
 
+tasks.named<Jar>("jar") {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
 intellijPlatform {
     pluginConfiguration {
         name = providers.gradleProperty("pluginName")
