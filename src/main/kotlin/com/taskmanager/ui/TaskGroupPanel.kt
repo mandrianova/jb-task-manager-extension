@@ -21,7 +21,8 @@ class TaskGroupPanel(
     private val project: Project,
     private val group: TaskGroup,
     private val onRunGroup: (TaskGroup) -> Unit,
-    private val onRunTask: (Task) -> Unit
+    private val onRunTask: (Task) -> Unit,
+    private val onStatusChange: (Task, TaskStatus) -> Unit
 ) : JPanel() {
 
     private var collapsed: Boolean = group.isCompleted
@@ -138,7 +139,7 @@ class TaskGroupPanel(
         contentPanel.border = JBUI.Borders.emptyLeft(8)
 
         for (task in group.tasks) {
-            contentPanel.add(TaskItemPanel(project, task, onRunTask))
+            contentPanel.add(TaskItemPanel(project, task, onRunTask, onStatusChange))
         }
 
         contentPanel.isVisible = !collapsed

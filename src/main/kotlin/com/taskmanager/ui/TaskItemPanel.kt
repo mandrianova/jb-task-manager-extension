@@ -16,6 +16,8 @@ import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.swing.*
@@ -23,7 +25,8 @@ import javax.swing.*
 class TaskItemPanel(
     private val project: Project,
     private val task: Task,
-    private val onRunTask: (Task) -> Unit
+    private val onRunTask: (Task) -> Unit,
+    private val onStatusChange: (Task, TaskStatus) -> Unit
 ) : JPanel(BorderLayout()) {
 
     init {
@@ -81,6 +84,19 @@ class TaskItemPanel(
         val rightPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 2, 0))
         rightPanel.isOpaque = false
 
+        // Copy ID button (always shown)
+        val copyButton = JButton(AllIcons.Actions.Copy)
+        copyButton.toolTipText = "Copy task ID: ${task.id}"
+        copyButton.preferredSize = Dimension(28, 28)
+        copyButton.isBorderPainted = false
+        copyButton.isContentAreaFilled = false
+        copyButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        copyButton.addActionListener {
+            Toolkit.getDefaultToolkit().systemClipboard
+                .setContents(StringSelection(task.id), null)
+        }
+        rightPanel.add(copyButton)
+
         // Commit diff button (only if commitId is set)
         if (task.commitId.isNotBlank()) {
             val commitButton = JButton(AllIcons.Actions.Diff)
@@ -93,15 +109,44 @@ class TaskItemPanel(
             rightPanel.add(commitButton)
         }
 
-        // Run button
-        val runButton = JButton(AllIcons.Actions.Execute)
-        runButton.toolTipText = "Run task with Claude"
-        runButton.preferredSize = Dimension(28, 28)
-        runButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        runButton.isBorderPainted = false
-        runButton.isContentAreaFilled = false
-        runButton.addActionListener { onRunTask(task) }
-        rightPanel.add(runButton)
+        // Action buttons depend on status
+        when (task.status) {
+            TaskStatus.IN_PROGRESS -> {
+                // Complete button
+                val completeButton = JButton(AllIcons.Actions.Checked)
+                completeButton.toolTipText = "Mark as completed"
+                completeButton.preferredSize = Dimension(28, 28)
+                completeButton.isBorderPainted = false
+                completeButton.isContentAreaFilled = false
+                completeButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                completeButton.addActionListener { onStatusChange(task, TaskStatus.COMPLETED) }
+                rightPanel.add(completeButton)
+
+                // Cancel button
+                val cancelButton = JButton(AllIcons.Actions.Suspend)
+                cancelButton.toolTipText = "Cancel task"
+                cancelButton.preferredSize = Dimension(28, 28)
+                cancelButton.isBorderPainted = false
+                cancelButton.isContentAreaFilled = false
+                cancelButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                cancelButton.addActionListener { onStatusChange(task, TaskStatus.CANCELLED) }
+                rightPanel.add(cancelButton)
+            }
+            TaskStatus.NEW, TaskStatus.PAUSED -> {
+                // Run button
+                val runButton = JButton(AllIcons.Actions.Execute)
+                runButton.toolTipText = "Run task with Claude"
+                runButton.preferredSize = Dimension(28, 28)
+                runButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                runButton.isBorderPainted = false
+                runButton.isContentAreaFilled = false
+                runButton.addActionListener { onRunTask(task) }
+                rightPanel.add(runButton)
+            }
+            TaskStatus.COMPLETED, TaskStatus.CANCELLED -> {
+                // No action buttons for finished tasks
+            }
+        }
 
         add(rightPanel, BorderLayout.EAST)
 
@@ -110,21 +155,12 @@ class TaskItemPanel(
 
     private fun showCommitDiff(commitHash: String) {
         try {
-            // Use VCS Log to navigate to the commit
-            val actionManager = com.intellij.openapi.actionSystem.ActionManager.getInstance()
-            val dataContext = com.intellij.openapi.actionSystem.impl.SimpleDataContext.builder()
-                .add(com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT, project)
-                .build()
-
-            // Open Git log and search for the commit
             val toolWindowManager = com.intellij.openapi.wm.ToolWindowManager.getInstance(project)
             val vcsToolWindow = toolWindowManager.getToolWindow("Version Control")
                 ?: toolWindowManager.getToolWindow("Git")
 
             if (vcsToolWindow != null) {
                 vcsToolWindow.activate {
-                    // Navigate to commit in VCS log by selecting the Log tab
-                    // and filtering by hash — user can then see the diff
                     val content = vcsToolWindow.contentManager.contents
                         .firstOrNull { it.displayName?.contains("Log", ignoreCase = true) == true }
                     if (content != null) {
@@ -133,11 +169,9 @@ class TaskItemPanel(
                 }
             }
 
-            // Also copy hash to clipboard for easy use
-            val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
-            clipboard.setContents(java.awt.datatransfer.StringSelection(commitHash), null)
+            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+            clipboard.setContents(StringSelection(commitHash), null)
 
-            // Show notification
             com.intellij.openapi.ui.Messages.showInfoMessage(
                 project,
                 "Commit hash copied to clipboard: ${commitHash.take(7)}\n\n" +
@@ -146,9 +180,8 @@ class TaskItemPanel(
                 "Commit: ${commitHash.take(7)}"
             )
         } catch (_: Exception) {
-            // Fallback: just copy hash
-            val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
-            clipboard.setContents(java.awt.datatransfer.StringSelection(commitHash), null)
+            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+            clipboard.setContents(StringSelection(commitHash), null)
         }
     }
 
@@ -169,7 +202,6 @@ class TaskItemPanel(
             val parts = mutableListOf<String>()
             parts.add("opened ${formatRelativeTime(created, now)}")
 
-            // Show "updated" only if it's actually after createdAt and different
             if (updated.isAfter(created)) {
                 parts.add("updated ${formatRelativeTime(updated, now)}")
             }
@@ -182,7 +214,7 @@ class TaskItemPanel(
 
     private fun formatRelativeTime(instant: Instant, now: Instant): String {
         val minutes = ChronoUnit.MINUTES.between(instant, now)
-        if (minutes < 0) return "just now" // future timestamp, treat as now
+        if (minutes < 0) return "just now"
         return when {
             minutes < 1 -> "just now"
             minutes < 60 -> "${minutes}m ago"

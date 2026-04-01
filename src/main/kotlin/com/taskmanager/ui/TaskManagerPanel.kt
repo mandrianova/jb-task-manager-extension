@@ -13,6 +13,7 @@ import com.intellij.util.ui.JBUI
 import com.taskmanager.actions.TerminalHelper
 import com.taskmanager.model.Task
 import com.taskmanager.model.TaskGroup
+import com.taskmanager.model.TaskStatus
 import com.taskmanager.service.TaskStorageService
 import java.awt.BorderLayout
 import javax.swing.BoxLayout
@@ -174,7 +175,8 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
                         project = project,
                         group = group,
                         onRunGroup = { g -> runGroup(g) },
-                        onRunTask = { t -> runTask(t) }
+                        onRunTask = { t -> runTask(t) },
+                        onStatusChange = { t, status -> changeTaskStatus(t, status) }
                     )
                 )
             }
@@ -206,5 +208,11 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
         ApplicationManager.getApplication().invokeLater {
             TerminalHelper.runClaudeSkill(project, "task-execute", task.id, "Task: ${task.name}")
         }
+    }
+
+    private fun changeTaskStatus(task: Task, status: TaskStatus) {
+        val storageService = TaskStorageService.getInstance(project)
+        storageService.updateTaskStatus(task.id, status)
+        refresh()
     }
 }

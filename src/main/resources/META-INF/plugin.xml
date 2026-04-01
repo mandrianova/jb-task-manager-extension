@@ -30,6 +30,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.12.0</h3>
+        <ul>
+            <li>Complete and Cancel icon buttons on in-progress tasks — update status without launching Claude</li>
+            <li>Copy task ID button on every task</li>
+            <li>Run button now only shown for New and Paused tasks</li>
+        </ul>
+
         <h3>1.11.0</h3>
         <ul>
             <li>"Install Skills" button now offers to update if skills are already installed</li>
