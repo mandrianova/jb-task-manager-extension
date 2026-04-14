@@ -114,8 +114,8 @@ class TaskItemPanel(
 
         // Action buttons depend on status
         when (task.status) {
-            TaskStatus.IN_PROGRESS -> {
-                // Complete button
+            TaskStatus.NEW, TaskStatus.PAUSED, TaskStatus.IN_PROGRESS -> {
+                // Complete button (all active statuses)
                 val completeButton = JButton(AllIcons.Actions.Checked)
                 completeButton.toolTipText = "Mark as completed"
                 completeButton.preferredSize = Dimension(28, 28)
@@ -125,7 +125,7 @@ class TaskItemPanel(
                 completeButton.addActionListener { onStatusChange(task, TaskStatus.COMPLETED) }
                 rightPanel.add(completeButton)
 
-                // Cancel button
+                // Cancel button (all active statuses)
                 val cancelButton = JButton(AllIcons.Actions.Suspend)
                 cancelButton.toolTipText = "Cancel task"
                 cancelButton.preferredSize = Dimension(28, 28)
@@ -134,17 +134,18 @@ class TaskItemPanel(
                 cancelButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
                 cancelButton.addActionListener { onStatusChange(task, TaskStatus.CANCELLED) }
                 rightPanel.add(cancelButton)
-            }
-            TaskStatus.NEW, TaskStatus.PAUSED -> {
-                // Run button
-                val runButton = JButton(AllIcons.Actions.Execute)
-                runButton.toolTipText = "Run task with Claude"
-                runButton.preferredSize = Dimension(28, 28)
-                runButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                runButton.isBorderPainted = false
-                runButton.isContentAreaFilled = false
-                runButton.addActionListener { onRunTask(task) }
-                rightPanel.add(runButton)
+
+                // Run button only for NEW and PAUSED
+                if (task.status != TaskStatus.IN_PROGRESS) {
+                    val runButton = JButton(AllIcons.Actions.Execute)
+                    runButton.toolTipText = "Run task with Claude"
+                    runButton.preferredSize = Dimension(28, 28)
+                    runButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                    runButton.isBorderPainted = false
+                    runButton.isContentAreaFilled = false
+                    runButton.addActionListener { onRunTask(task) }
+                    rightPanel.add(runButton)
+                }
             }
             TaskStatus.COMPLETED, TaskStatus.CANCELLED -> {
                 // No action buttons for finished tasks

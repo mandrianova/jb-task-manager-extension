@@ -30,6 +30,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.14.0</h3>
+        <ul>
+            <li>Complete and Cancel buttons now available on all active tasks (New, Paused, In Progress), not only In Progress</li>
+        </ul>
+
         <h3>1.13.0</h3>
         <ul>
             <li>Task name now truncates with ellipsis when the panel is narrow; MD file link always stays visible</li>
