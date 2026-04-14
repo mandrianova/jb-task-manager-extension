@@ -36,33 +36,32 @@ class TaskGroupPanel(
 
         // Header
         val header = JPanel(BorderLayout())
-        header.maximumSize = Dimension(Int.MAX_VALUE, 32)
+        header.maximumSize = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
         header.border = JBUI.Borders.empty(2, 4)
         header.isOpaque = false
 
-        val leftHeader = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0))
-        leftHeader.isOpaque = false
-
-        // Collapse toggle
-        collapseIcon = JBLabel(if (collapsed) AllIcons.General.ArrowRight else AllIcons.General.ArrowDown)
-        collapseIcon.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        collapseIcon.addMouseListener(object : java.awt.event.MouseAdapter() {
-            override fun mouseClicked(e: java.awt.event.MouseEvent) {
-                toggleCollapse()
-            }
-        })
-        leftHeader.add(collapseIcon)
-
-        // Group name + optional tracker link
+        // Tracker link config
         val trackerConfig = TaskStorageService.getInstance(project).loadTrackerConfig()
         val externalId = trackerConfig.type.extractId(group.name)
 
+        // ── Row 1: [▼] [name…truncates] [🔗 link] ──────────────────────
+        val nameRow = JPanel(BorderLayout(4, 0))
+        nameRow.isOpaque = false
+        nameRow.alignmentX = LEFT_ALIGNMENT
+        nameRow.maximumSize = Dimension(Int.MAX_VALUE, 22)
+
+        collapseIcon = JBLabel(if (collapsed) AllIcons.General.ArrowRight else AllIcons.General.ArrowDown)
+        collapseIcon.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        collapseIcon.addMouseListener(object : java.awt.event.MouseAdapter() {
+            override fun mouseClicked(e: java.awt.event.MouseEvent) { toggleCollapse() }
+        })
+        nameRow.add(collapseIcon, BorderLayout.WEST)
+
         val nameLabel = JBLabel(group.name)
         nameLabel.font = nameLabel.font.deriveFont(Font.BOLD)
-        if (group.isCompleted) {
-            nameLabel.foreground = UIUtil.getInactiveTextColor()
-        }
-        leftHeader.add(nameLabel)
+        nameLabel.toolTipText = group.name
+        if (group.isCompleted) nameLabel.foreground = UIUtil.getInactiveTextColor()
+        nameRow.add(nameLabel, BorderLayout.CENTER)
 
         if (externalId != null && trackerConfig.type != TrackerType.NONE && trackerConfig.baseUrl.isNotBlank()) {
             val url = trackerConfig.type.buildUrl(trackerConfig.baseUrl, externalId)
@@ -71,35 +70,40 @@ class TaskGroupPanel(
             linkLabel.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             linkLabel.font = linkLabel.font.deriveFont(Font.PLAIN, 11f)
             linkLabel.toolTipText = url
-            linkLabel.border = JBUI.Borders.emptyLeft(6)
             linkLabel.addMouseListener(object : java.awt.event.MouseAdapter() {
-                override fun mouseClicked(e: java.awt.event.MouseEvent) {
-                    BrowserUtil.browse(url)
-                }
+                override fun mouseClicked(e: java.awt.event.MouseEvent) { BrowserUtil.browse(url) }
             })
-            leftHeader.add(linkLabel)
+            nameRow.add(linkLabel, BorderLayout.EAST)
         }
 
-        // Status badge
+        // ── Row 2: [status] [(n)] [date] ─────────────────────────────────
+        val metaRow = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0))
+        metaRow.isOpaque = false
+        metaRow.alignmentX = LEFT_ALIGNMENT
+        metaRow.maximumSize = Dimension(Int.MAX_VALUE, 18)
+        metaRow.border = JBUI.Borders.emptyLeft(20) // align with name text
+
         val statusBadge = JBLabel(getStatusText(group.derivedStatus))
         statusBadge.font = statusBadge.font.deriveFont(Font.PLAIN, 11f)
         statusBadge.foreground = getStatusColor(group.derivedStatus)
-        statusBadge.border = JBUI.Borders.emptyLeft(8)
-        leftHeader.add(statusBadge)
+        metaRow.add(statusBadge)
 
-        // Task count
         val countLabel = JBLabel("(${group.tasks.size})")
         countLabel.foreground = UIUtil.getInactiveTextColor()
         countLabel.font = countLabel.font.deriveFont(Font.PLAIN, 11f)
-        countLabel.border = JBUI.Borders.emptyLeft(4)
-        leftHeader.add(countLabel)
+        metaRow.add(countLabel)
 
-        // Created date
         val createdLabel = JBLabel(formatGroupDate(group.createdAt))
         createdLabel.foreground = UIUtil.getContextHelpForeground()
         createdLabel.font = createdLabel.font.deriveFont(Font.PLAIN, 10f)
-        createdLabel.border = JBUI.Borders.emptyLeft(8)
-        leftHeader.add(createdLabel)
+        metaRow.add(createdLabel)
+
+        // ── Combine rows into left area ───────────────────────────────────
+        val leftHeader = JPanel()
+        leftHeader.layout = BoxLayout(leftHeader, BoxLayout.Y_AXIS)
+        leftHeader.isOpaque = false
+        leftHeader.add(nameRow)
+        leftHeader.add(metaRow)
 
         header.add(leftHeader, BorderLayout.CENTER)
 
@@ -117,7 +121,6 @@ class TaskGroupPanel(
         rightHeader.add(runButton)
         header.add(rightHeader, BorderLayout.EAST)
 
-        // Add separator below header
         header.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         header.addMouseListener(object : java.awt.event.MouseAdapter() {
             override fun mouseClicked(e: java.awt.event.MouseEvent) {

@@ -30,6 +30,13 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.15.0</h3>
+        <ul>
+            <li>Group header name now truncates with ellipsis; full name shown in tooltip</li>
+            <li>Group meta info (status, count, date) moved to a second line — no more fixed 32px height cap</li>
+            <li>Tracker link stays anchored to the right of the group name</li>
+        </ul>
+
         <h3>1.14.0</h3>
         <ul>
             <li>Complete and Cancel buttons now available on all active tasks (New, Paused, In Progress), not only In Progress</li>
