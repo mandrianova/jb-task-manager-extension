@@ -182,18 +182,6 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
             }
         }
 
-        // Add create button at the bottom
-        val createPanel = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT))
-        createPanel.isOpaque = false
-        val createButton = javax.swing.JButton("+ New Group / Task")
-        createButton.addActionListener {
-            ApplicationManager.getApplication().invokeLater {
-                TerminalHelper.runClaudeSkill(project, "task-create", "", "Create Task")
-            }
-        }
-        createPanel.add(createButton)
-        groupsContainer.add(createPanel)
-
         groupsContainer.revalidate()
         groupsContainer.repaint()
     }

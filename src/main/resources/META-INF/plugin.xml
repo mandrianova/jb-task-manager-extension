@@ -30,6 +30,12 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.13.0</h3>
+        <ul>
+            <li>Task name now truncates with ellipsis when the panel is narrow; MD file link always stays visible</li>
+            <li>Removed redundant "+ New Group / Task" button at the bottom of the list</li>
+        </ul>
+
         <h3>1.12.0</h3>
         <ul>
             <li>Complete and Cancel icon buttons on in-progress tasks — update status without launching Claude</li>

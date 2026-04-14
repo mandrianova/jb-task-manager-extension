@@ -36,31 +36,32 @@ class TaskItemPanel(
         val leftPanel = JPanel()
         leftPanel.layout = BoxLayout(leftPanel, BoxLayout.Y_AXIS)
         leftPanel.isOpaque = false
+        leftPanel.alignmentX = LEFT_ALIGNMENT
 
-        // Top row: status icon + name + md link
-        val topRow = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0))
+        // Top row: [icon] [name...truncates] [md link]
+        val topRow = JPanel(BorderLayout(6, 0))
         topRow.isOpaque = false
+        topRow.alignmentX = LEFT_ALIGNMENT
+        topRow.maximumSize = Dimension(Int.MAX_VALUE, 22)
 
-        // Status icon
+        // Status icon (fixed WEST)
         val statusIcon = JBLabel(getStatusIcon(task.status))
         statusIcon.toolTipText = task.status.displayName
-        topRow.add(statusIcon)
+        topRow.add(statusIcon, BorderLayout.WEST)
 
-        // Task name
+        // Task name (CENTER — truncates when narrow)
         val nameLabel = JBLabel(task.name)
         nameLabel.toolTipText = task.description.ifBlank { task.name }
         if (task.status == TaskStatus.COMPLETED || task.status == TaskStatus.CANCELLED) {
             nameLabel.foreground = UIUtil.getInactiveTextColor()
         }
-        topRow.add(nameLabel)
+        topRow.add(nameLabel, BorderLayout.CENTER)
 
-        // MD file link
+        // MD file link (fixed EAST — always visible)
         val mdLink = HyperlinkLabel(task.mdFile.substringAfterLast('/'))
         mdLink.toolTipText = "Open ${task.mdFile}"
-        mdLink.addHyperlinkListener {
-            openMdFile()
-        }
-        topRow.add(mdLink)
+        mdLink.addHyperlinkListener { openMdFile() }
+        topRow.add(mdLink, BorderLayout.EAST)
 
         leftPanel.add(topRow)
 
@@ -69,6 +70,8 @@ class TaskItemPanel(
         if (timeText.isNotEmpty()) {
             val timeRow = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0))
             timeRow.isOpaque = false
+            timeRow.alignmentX = LEFT_ALIGNMENT
+            timeRow.maximumSize = Dimension(Int.MAX_VALUE, 18)
             timeRow.border = JBUI.Borders.emptyLeft(22) // align with name
 
             val timeLabel = JBLabel(timeText)
