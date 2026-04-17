@@ -148,10 +148,11 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
 
     fun refresh() {
         val data = storageService.loadTasks()
-        // Sort: active groups first, completed at the bottom
+        // Sort: active groups first, then newest by createdAt (with order as fallback)
         allGroups = data.groups.sortedWith(
             compareBy<TaskGroup> { it.isCompleted }
-                .thenBy { it.order }
+                .thenByDescending { it.createdAt }
+                .thenByDescending { it.order }
         )
         paginationPanel.update(allGroups.size)
         renderGroups()
