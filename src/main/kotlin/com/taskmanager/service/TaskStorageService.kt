@@ -54,37 +54,89 @@ class TaskStorageService(private val project: Project) {
 
     fun getTasksBasePath(): Path {
         val basePath = project.basePath ?: throw IllegalStateException("Project base path is null")
-        return Paths.get(basePath, ".claude", "tasks")
+        val config = loadTrackerConfig()
+        return getTasksBasePath(config)
+    }
+
+    private fun getTasksBasePath(config: TrackerConfig): Path {
+        val basePath = project.basePath ?: throw IllegalStateException("Project base path is null")
+        return when (config.taskStorage) {
+            TaskStorageType.CLAUDE -> Paths.get(basePath, ".claude", "tasks")
+            TaskStorageType.AGENTS -> Paths.get(basePath, ".agents", "tasks")
+            TaskStorageType.KIRO -> Paths.get(basePath, ".kiro", "tasks")
+            TaskStorageType.IDEA -> Paths.get(basePath, ".idea", "agents-tasks")
+            TaskStorageType.AUTO -> resolveAutoTasksBasePath(basePath, config.agent)
+        }
+    }
+
+    private fun resolveAutoTasksBasePath(basePath: String, agent: AgentType): Path {
+        val legacyPath = Paths.get(basePath, ".claude", "tasks")
+        if (Files.exists(legacyPath)) return legacyPath
+
+        return when (agent) {
+            AgentType.CLAUDE -> legacyPath
+            AgentType.CODEX -> Paths.get(basePath, ".agents", "tasks")
+            AgentType.KIRO -> Paths.get(basePath, ".kiro", "tasks")
+        }
+    }
+
+    fun getTasksBasePathRelative(): String {
+        val projectBasePath = project.basePath ?: return getTasksBasePath().toString()
+        val basePath = Paths.get(projectBasePath)
+        return basePath.relativize(getTasksBasePath()).toString()
     }
 
     private fun getTasksFilePath(): Path = getTasksBasePath().resolve("tasks.json")
     private fun getArchiveFilePath(): Path = getTasksBasePath().resolve("archive.json")
     private fun getDocsPath(): Path = getTasksBasePath().resolve("docs")
     private fun getConfigFilePath(): Path = getTasksBasePath().resolve("config.json")
+    private fun getConfigFilePath(config: TrackerConfig): Path = getTasksBasePath(config).resolve("config.json")
 
     fun loadTrackerConfig(): TrackerConfig {
-        val path = getConfigFilePath()
-        if (!Files.exists(path)) return TrackerConfig()
-        val content = Files.readString(path)
-        if (content.isBlank()) return TrackerConfig()
-        return try {
-            json.decodeFromString<TrackerConfig>(content)
-        } catch (_: Exception) {
-            TrackerConfig()
+        val configPaths = getKnownConfigPaths()
+            .filter { Files.exists(it) }
+            .sortedByDescending {
+                try {
+                    Files.getLastModifiedTime(it).toMillis()
+                } catch (_: Exception) {
+                    0L
+                }
+            }
+
+        for (path in configPaths) {
+            val content = Files.readString(path)
+            if (content.isBlank()) continue
+            return try {
+                json.decodeFromString<TrackerConfig>(content)
+            } catch (_: Exception) {
+                TrackerConfig()
+            }
         }
+        return TrackerConfig()
     }
 
     fun saveTrackerConfig(config: TrackerConfig) {
-        ensureDirectories()
+        ensureDirectories(config)
         val content = json.encodeToString(TrackerConfig.serializer(), config)
-        Files.writeString(getConfigFilePath(), content)
+        Files.writeString(getConfigFilePath(config), content)
         refreshVfs()
         notifyListeners()
     }
 
-    private fun ensureDirectories() {
-        Files.createDirectories(getTasksBasePath())
-        Files.createDirectories(getDocsPath())
+    private fun getKnownConfigPaths(): List<Path> {
+        val basePath = project.basePath ?: return emptyList()
+        return listOf(
+            Paths.get(basePath, ".claude", "tasks", "config.json"),
+            Paths.get(basePath, ".agents", "tasks", "config.json"),
+            Paths.get(basePath, ".kiro", "tasks", "config.json"),
+            Paths.get(basePath, ".idea", "agents-tasks", "config.json")
+        )
+    }
+
+    private fun ensureDirectories(config: TrackerConfig = loadTrackerConfig()) {
+        val tasksBasePath = getTasksBasePath(config)
+        Files.createDirectories(tasksBasePath)
+        Files.createDirectories(tasksBasePath.resolve("docs"))
     }
 
     fun isInitialized(): Boolean = Files.exists(getTasksFilePath())
@@ -112,9 +164,8 @@ class TaskStorageService(private val project: Project) {
         return Paths.get("") // fallback
     }
 
-    fun installSkills(overwrite: Boolean = false): Boolean {
-        val basePath = project.basePath ?: return false
-        val targetDir = Paths.get(basePath, ".claude", "skills")
+    fun installSkills(agent: AgentType = loadTrackerConfig().agent, overwrite: Boolean = false): Boolean {
+        val targetDir = getSkillsInstallPath(agent) ?: return false
         val skills = mapOf(
             "task-execute" to getSkillContent("task-execute"),
             "task-create" to getSkillContent("task-create"),
@@ -134,7 +185,7 @@ class TaskStorageService(private val project: Project) {
             }
         }
 
-        // Also install/update task-cli.sh into .claude/tasks/
+        // Keep task data and the CLI helper in the configured task directory.
         val cliScript = getResourceContent("/scripts/task-cli.sh")
         if (cliScript.isNotBlank()) {
             ensureDirectories()
@@ -150,12 +201,23 @@ class TaskStorageService(private val project: Project) {
         return changed
     }
 
-    fun areSkillsInstalled(): Boolean {
-        val basePath = project.basePath ?: return false
-        val skillsDir = Paths.get(basePath, ".claude", "skills")
+    fun areSkillsInstalled(agent: AgentType = loadTrackerConfig().agent): Boolean {
+        val skillsDir = getSkillsInstallPath(agent) ?: return false
         return Files.exists(skillsDir.resolve("task-execute/SKILL.md"))
                 && Files.exists(skillsDir.resolve("task-create/SKILL.md"))
+                && Files.exists(skillsDir.resolve("task-setup/SKILL.md"))
                 && Files.exists(getTasksBasePath().resolve("task-cli.sh"))
+    }
+
+    private fun getSkillsInstallPath(agent: AgentType): Path? {
+        return when (agent) {
+            AgentType.CLAUDE -> {
+                val basePath = project.basePath ?: return null
+                Paths.get(basePath, ".claude", "skills")
+            }
+            AgentType.CODEX -> Paths.get(System.getProperty("user.home"), ".agents", "skills")
+            AgentType.KIRO -> Paths.get(System.getProperty("user.home"), ".kiro", "skills")
+        }
     }
 
     private fun getSkillContent(skillName: String): String {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# task-cli.sh — CLI helper for managing tasks in .claude/tasks/tasks.json
-# Used by Claude skills to avoid reading/writing raw JSON manually.
+# task-cli.sh — CLI helper for managing Task Manager tasks.
+# Used by agent skills to avoid reading/writing raw JSON manually.
 #
 # Usage:
 #   task-cli.sh list [--group <id>] [--status <s>] [--all]  — list groups/tasks (includes config)
@@ -16,7 +16,40 @@
 
 set -euo pipefail
 
-TASKS_DIR=".claude/tasks"
+resolve_tasks_dir() {
+    if [ -n "${TASK_MANAGER_TASKS_DIR:-}" ]; then
+        echo "$TASK_MANAGER_TASKS_DIR"
+        return
+    fi
+
+    if [ -d ".claude/tasks" ]; then
+        echo ".claude/tasks"
+        return
+    fi
+
+    if [ -d ".agents/tasks" ]; then
+        echo ".agents/tasks"
+        return
+    fi
+
+    if [ -d ".kiro/tasks" ]; then
+        echo ".kiro/tasks"
+        return
+    fi
+
+    if [ -d ".idea/agents-tasks" ]; then
+        echo ".idea/agents-tasks"
+        return
+    fi
+
+    case "${TASK_MANAGER_AGENT:-}" in
+        codex|CODEX|Codex) echo ".agents/tasks" ;;
+        kiro|KIRO|Kiro|kiro-cli) echo ".kiro/tasks" ;;
+        *) echo ".claude/tasks" ;;
+    esac
+}
+
+TASKS_DIR="$(resolve_tasks_dir)"
 TASKS_FILE="$TASKS_DIR/tasks.json"
 DOCS_DIR="$TASKS_DIR/docs"
 CONFIG_FILE="$TASKS_DIR/config.json"
@@ -25,6 +58,10 @@ ensure_dirs() {
     mkdir -p "$TASKS_DIR" "$DOCS_DIR"
     if [ ! -f "$TASKS_FILE" ]; then
         echo '{"groups":[]}' > "$TASKS_FILE"
+    fi
+    if [ ! -f "$TASKS_DIR/task-cli.sh" ] && [ -f "${0:-}" ]; then
+        cp "$0" "$TASKS_DIR/task-cli.sh" 2>/dev/null || true
+        chmod +x "$TASKS_DIR/task-cli.sh" 2>/dev/null || true
     fi
 }
 

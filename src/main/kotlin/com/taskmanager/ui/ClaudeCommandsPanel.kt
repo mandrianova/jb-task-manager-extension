@@ -19,8 +19,10 @@ import com.intellij.util.ui.UIUtil
 import com.taskmanager.actions.TerminalHelper
 import com.taskmanager.service.ClaudeSkillScanner
 import com.taskmanager.service.ClaudeSkillScanner.Source
+import com.taskmanager.service.TaskStorageService
 import java.awt.*
 import javax.swing.*
+import javax.swing.SwingUtilities
 
 class ClaudeCommandsPanel(private val project: Project) : JBPanel<JBPanel<*>>(BorderLayout()) {
 
@@ -41,27 +43,32 @@ class ClaudeCommandsPanel(private val project: Project) : JBPanel<JBPanel<*>>(Bo
         scrollPane.border = JBUI.Borders.empty()
         add(scrollPane, BorderLayout.CENTER)
 
+        TaskStorageService.getInstance(project).addChangeListener {
+            SwingUtilities.invokeLater { refresh() }
+        }
+
         refresh()
     }
 
     private fun createToolbar(): ActionToolbar {
         val actionGroup = DefaultActionGroup().apply {
-            add(object : AnAction("Refresh", "Rescan commands and skills", AllIcons.Actions.Refresh) {
+            add(object : AnAction("Refresh", "Rescan commands and skills for the configured agent", AllIcons.Actions.Refresh) {
                 override fun actionPerformed(e: AnActionEvent) { refresh() }
             })
         }
         val toolbar = ActionManager.getInstance()
-            .createActionToolbar("ClaudeCommandsToolbar", actionGroup, true)
+            .createActionToolbar("AgentCommandsToolbar", actionGroup, true)
         toolbar.targetComponent = this
         return toolbar
     }
 
     fun refresh() {
         listContainer.removeAll()
+        val agent = TaskStorageService.getInstance(project).loadTrackerConfig().agent
         val commands = scanner.scan()
 
         if (commands.isEmpty()) {
-            val emptyLabel = JBLabel("No commands or skills found in .claude/")
+            val emptyLabel = JBLabel("No commands or skills found for ${agent.displayName}")
             emptyLabel.border = JBUI.Borders.empty(20)
             emptyLabel.foreground = JBColor.GRAY
             listContainer.add(emptyLabel)
@@ -175,14 +182,15 @@ class ClaudeCommandsPanel(private val project: Project) : JBPanel<JBPanel<*>>(Bo
 
         // Run button
         val runButton = JButton(AllIcons.Actions.Execute)
-        runButton.toolTipText = "Run /${cmd.name} in Claude"
+        val agent = TerminalHelper.getConfiguredAgent(project)
+        runButton.toolTipText = "Run ${cmd.name} with ${agent.displayName}"
         runButton.preferredSize = Dimension(28, 28)
         runButton.isBorderPainted = false
         runButton.isContentAreaFilled = false
         runButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         runButton.addActionListener {
             ApplicationManager.getApplication().invokeLater {
-                TerminalHelper.runClaudeSkill(project, cmd.name, "", "/${cmd.name}")
+                TerminalHelper.runAgentSkill(project, cmd.name, "", cmd.name)
             }
         }
         rightPanel.add(runButton)

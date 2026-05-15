@@ -7,49 +7,62 @@ description: Execute tasks from the project task manager. Uses task-cli.sh to re
 
 You are executing tasks from the project's task management system.
 
+Resolve `TASKS_DIR` before running commands:
+1. If `TASK_MANAGER_TASKS_DIR` is set, use that.
+2. Else if `.claude/tasks` exists, use `.claude/tasks` for backward compatibility.
+3. Else if `.agents/tasks` exists, use `.agents/tasks`.
+4. Else if `.kiro/tasks` exists, use `.kiro/tasks`.
+5. Else if `.idea/agents-tasks` exists, use `.idea/agents-tasks`.
+6. Else if `TASK_MANAGER_AGENT=codex` or you are running in Codex, use `.agents/tasks`; if `TASK_MANAGER_AGENT=kiro-cli` or you are running in Kiro, use `.kiro/tasks`; otherwise use `.claude/tasks`.
+
 ## CLI helper
 
-**IMPORTANT:** Always use the **relative path** `bash .claude/tasks/task-cli.sh` — never an absolute path. This ensures permission rules match correctly.
+**IMPORTANT:** Always use a **relative path** for `task-cli.sh` — never an absolute path. This ensures permission rules match correctly.
 
 ```bash
+TASKS_DIR="${TASK_MANAGER_TASKS_DIR:-$(case "${TASK_MANAGER_AGENT:-}" in codex) echo .agents/tasks ;; kiro|kiro-cli) echo .kiro/tasks ;; *) echo .claude/tasks ;; esac)}"
+
 # List active tasks (includes tracker config at the top)
-bash .claude/tasks/task-cli.sh list
+bash "$TASKS_DIR/task-cli.sh" list
 
 # List tasks in a specific group (active only by default)
-bash .claude/tasks/task-cli.sh list --group <groupId>
+bash "$TASKS_DIR/task-cli.sh" list --group <groupId>
 
 # List ALL tasks including completed/cancelled
-bash .claude/tasks/task-cli.sh list --all
+bash "$TASKS_DIR/task-cli.sh" list --all
 
 # Filter by specific status
-bash .claude/tasks/task-cli.sh list --status in_progress
+bash "$TASKS_DIR/task-cli.sh" list --status in_progress
 
 # Get full JSON details of a task or group
-bash .claude/tasks/task-cli.sh get <id>
+bash "$TASKS_DIR/task-cli.sh" get <id>
 
 # Update task status
-bash .claude/tasks/task-cli.sh status <taskId> <status>
+bash "$TASKS_DIR/task-cli.sh" status <taskId> <status>
 
 # Attach commit hash to a task
-bash .claude/tasks/task-cli.sh commit <taskId> <commitHash>
+bash "$TASKS_DIR/task-cli.sh" commit <taskId> <commitHash>
 
 # Create a new subtask
-bash .claude/tasks/task-cli.sh add-task <groupId> "<name>" "<description>"
+bash "$TASKS_DIR/task-cli.sh" add-task <groupId> "<name>" "<description>"
 ```
 
 **Note:** `list` outputs tracker config automatically — no need to call `config` separately.
 
-If `task-cli.sh` is not found at `.claude/tasks/task-cli.sh`, check `scripts/task-cli.sh` and copy it.
+If `task-cli.sh` is not found at `$TASKS_DIR/task-cli.sh`, check `scripts/task-cli.sh` and copy it.
 
 ## Permissions check
 
-Before starting, check if `.claude/settings.local.json` exists. If it doesn't, suggest the user create it with the recommended permissions:
+Before starting in Claude Code, check if `.claude/settings.local.json` exists. If it doesn't, suggest the user create it with the recommended permissions:
 
 ```json
 {
   "permissions": {
     "allow": [
       "Bash(bash .claude/tasks/task-cli.sh:*)",
+      "Bash(bash .agents/tasks/task-cli.sh:*)",
+      "Bash(bash .kiro/tasks/task-cli.sh:*)",
+      "Bash(bash .idea/agents-tasks/task-cli.sh:*)",
       "Bash(git log:*)",
       "Bash(git rev-parse:*)",
       "Bash(git add:*)",
@@ -58,15 +71,26 @@ Before starting, check if `.claude/settings.local.json` exists. If it doesn't, s
       "Bash(git status:*)",
       "Read(.claude/tasks/**)",
       "Edit(.claude/tasks/**)",
-      "Write(.claude/tasks/**)"
+      "Write(.claude/tasks/**)",
+      "Read(.agents/tasks/**)",
+      "Edit(.agents/tasks/**)",
+      "Write(.agents/tasks/**)",
+      "Read(.kiro/tasks/**)",
+      "Edit(.kiro/tasks/**)",
+      "Write(.kiro/tasks/**)",
+      "Read(.idea/agents-tasks/**)",
+      "Edit(.idea/agents-tasks/**)",
+      "Write(.idea/agents-tasks/**)"
     ]
   }
 }
 ```
 
-Tell the user: "To avoid repeated permission prompts, I can create `.claude/settings.local.json` with task management permissions. Want me to do that?"
+Tell the user: "To avoid repeated permission prompts in Claude, I can create `.claude/settings.local.json` with task management permissions. Want me to do that?"
 
 If the user agrees, create the file. If the file already exists, do not modify it. Only suggest this once per session.
+
+If you are running in Codex, prefer the resolved `TASKS_DIR`; do not create another task directory when one already exists.
 
 ## Input
 
@@ -74,10 +98,10 @@ You receive a single argument via `$ARGUMENTS`: either a **group ID** or a **tas
 
 ## Finding the task
 
-1. Run `bash .claude/tasks/task-cli.sh list --group <id>` to see the group's active tasks and tracker config in one call.
+1. Run `bash "$TASKS_DIR/task-cli.sh" list --group <id>` to see the group's active tasks and tracker config in one call.
 2. If a **group ID** — process tasks with status `new` or `in_progress` in order.
-3. If a **task ID** — run `bash .claude/tasks/task-cli.sh get <id>` to get its details.
-4. If the ID is not found, run `bash .claude/tasks/task-cli.sh list` to show all available IDs.
+3. If a **task ID** — run `bash "$TASKS_DIR/task-cli.sh" get <id>` to get its details.
+4. If the ID is not found, run `bash "$TASKS_DIR/task-cli.sh" list` to show all available IDs.
 
 ## External tracker integration
 
@@ -92,8 +116,8 @@ For each task, follow these stages strictly in order:
 
 ### Stage 1: Analysis & Planning
 
-1. Read the markdown file from `.claude/tasks/docs/<mdFile>`.
-2. Update status: `bash .claude/tasks/task-cli.sh status <taskId> in_progress`
+1. Read the markdown file from `$TASKS_DIR/docs/<mdFile>`.
+2. Update status: `bash "$TASKS_DIR/task-cli.sh" status <taskId> in_progress`
 3. Analyze the task requirements thoroughly.
 4. If anything is unclear, **ask the user** for clarification.
 5. Create a detailed implementation plan.
@@ -137,12 +161,12 @@ For each task, follow these stages strictly in order:
 5. If pre-commit hooks fail, fix the issues and create a new commit (do NOT amend).
 6. **Record the commit hash**: After committing, get the hash with `git rev-parse HEAD` and run:
    ```bash
-   bash .claude/tasks/task-cli.sh commit <taskId> $(git rev-parse HEAD)
+   bash "$TASKS_DIR/task-cli.sh" commit <taskId> $(git rev-parse HEAD)
    ```
 
 ### Stage 5: Completion
 
-1. Update status: `bash .claude/tasks/task-cli.sh status <taskId> completed`
+1. Update status: `bash "$TASKS_DIR/task-cli.sh" status <taskId> completed`
 2. Append a `## Result` section to the task's MD file with a summary of what was done (and the commit hash if applicable).
 
 ## Creating subtasks
@@ -151,7 +175,7 @@ If during execution you discover work that should be a separate task:
 
 ```bash
 # Get the group ID from the current task
-bash .claude/tasks/task-cli.sh add-task <groupId> "Subtask name" "Description of what needs to be done"
+bash "$TASKS_DIR/task-cli.sh" add-task <groupId> "Subtask name" "Description of what needs to be done"
 ```
 
 This creates the task entry and the markdown file automatically. Inform the user about the new subtask.

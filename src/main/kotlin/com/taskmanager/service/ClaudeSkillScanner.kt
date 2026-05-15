@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.stream.Stream
 
 @Service(Service.Level.PROJECT)
 class ClaudeSkillScanner(private val project: Project) {
@@ -25,26 +26,47 @@ class ClaudeSkillScanner(private val project: Project) {
     }
 
     fun scan(): List<ClaudeCommand> {
+        val agent = TaskStorageService.getInstance(project).loadTrackerConfig().agent
+        return scan(agent)
+    }
+
+    fun scan(agent: AgentType): List<ClaudeCommand> {
         val result = mutableListOf<ClaudeCommand>()
         val basePath = project.basePath ?: return result
 
-        // Project-level: .claude/commands/*.md
-        scanCommands(Paths.get(basePath, ".claude", "commands"), Source.PROJECT_COMMAND, result)
-
-        // Project-level: .claude/skills/*/SKILL.md
-        scanSkills(Paths.get(basePath, ".claude", "skills"), Source.PROJECT_SKILL, result)
-
-        // Global: ~/.claude/commands/*.md
-        val home = System.getProperty("user.home")
-        scanCommands(Paths.get(home, ".claude", "commands"), Source.GLOBAL_COMMAND, result)
-
-        // Global: ~/.claude/skills/*/SKILL.md
-        scanSkills(Paths.get(home, ".claude", "skills"), Source.GLOBAL_SKILL, result)
-
-        // Built-in Claude commands
-        addBuiltinCommands(result)
+        when (agent) {
+            AgentType.CLAUDE -> scanClaude(basePath, result)
+            AgentType.CODEX -> scanCodex(basePath, result)
+            AgentType.KIRO -> scanKiro(basePath, result)
+        }
 
         return result
+    }
+
+    private fun scanClaude(basePath: String, result: MutableList<ClaudeCommand>) {
+        scanCommands(Paths.get(basePath, ".claude", "commands"), Source.PROJECT_COMMAND, result)
+        scanSkills(Paths.get(basePath, ".claude", "skills"), Source.PROJECT_SKILL, result)
+
+        val home = System.getProperty("user.home")
+        scanCommands(Paths.get(home, ".claude", "commands"), Source.GLOBAL_COMMAND, result)
+        scanSkills(Paths.get(home, ".claude", "skills"), Source.GLOBAL_SKILL, result)
+
+        addBuiltinCommands(result)
+    }
+
+    private fun scanCodex(basePath: String, result: MutableList<ClaudeCommand>) {
+        scanSkills(Paths.get(basePath, ".agents", "skills"), Source.PROJECT_SKILL, result)
+
+        val home = System.getProperty("user.home")
+        scanSkills(Paths.get(home, ".agents", "skills"), Source.GLOBAL_SKILL, result)
+        scanSkills(Paths.get(home, ".codex", "skills"), Source.GLOBAL_SKILL, result, maxDepth = 3)
+    }
+
+    private fun scanKiro(basePath: String, result: MutableList<ClaudeCommand>) {
+        scanSkills(Paths.get(basePath, ".kiro", "skills"), Source.PROJECT_SKILL, result)
+
+        val home = System.getProperty("user.home")
+        scanSkills(Paths.get(home, ".kiro", "skills"), Source.GLOBAL_SKILL, result)
     }
 
     private fun addBuiltinCommands(result: MutableList<ClaudeCommand>) {
@@ -77,19 +99,20 @@ class ClaudeSkillScanner(private val project: Project) {
         } catch (_: Exception) {}
     }
 
-    private fun scanSkills(dir: Path, source: Source, result: MutableList<ClaudeCommand>) {
+    private fun scanSkills(dir: Path, source: Source, result: MutableList<ClaudeCommand>, maxDepth: Int = 2) {
         if (!Files.isDirectory(dir)) return
         try {
-            Files.list(dir).use { stream ->
-                stream.filter { Files.isDirectory(it) }
-                    .forEach { skillDir ->
-                        val skillFile = skillDir.resolve("SKILL.md")
-                        if (Files.exists(skillFile)) {
-                            val name = skillDir.fileName.toString()
-                            val description = extractSkillDescription(skillFile)
-                            result.add(ClaudeCommand(name, description, source, skillFile))
-                        }
+            Files.find(dir, maxDepth, { path, attrs ->
+                attrs.isRegularFile && path.fileName.toString() == "SKILL.md"
+            }).use { stream: Stream<Path> ->
+                stream.forEach { skillFile ->
+                    val skillDir = skillFile.parent
+                    if (skillDir != null) {
+                        val name = skillDir.fileName.toString()
+                        val description = extractSkillDescription(skillFile)
+                        result.add(ClaudeCommand(name, description, source, skillFile))
                     }
+                }
             }
         } catch (_: Exception) {}
     }

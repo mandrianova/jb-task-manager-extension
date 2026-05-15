@@ -5,8 +5,30 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TrackerConfig(
     val type: TrackerType = TrackerType.NONE,
-    val baseUrl: String = ""
+    val baseUrl: String = "",
+    val agent: AgentType = AgentType.CLAUDE,
+    val taskStorage: TaskStorageType = TaskStorageType.AUTO
 )
+
+@Serializable
+enum class AgentType(
+    val displayName: String,
+    val executableName: String,
+    val skillsPathLabel: String
+) {
+    CLAUDE("Claude Code", "claude", ".claude/skills"),
+    CODEX("Codex", "codex", "~/.agents/skills"),
+    KIRO("Kiro", "kiro-cli", "~/.kiro/skills")
+}
+
+@Serializable
+enum class TaskStorageType(val displayName: String) {
+    AUTO("Auto"),
+    CLAUDE(".claude/tasks"),
+    AGENTS(".agents/tasks"),
+    KIRO(".kiro/tasks"),
+    IDEA(".idea/agents-tasks")
+}
 
 @Serializable
 enum class TrackerType(val displayName: String, val idPattern: String, val urlTemplate: String) {

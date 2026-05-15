@@ -8,6 +8,8 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import com.taskmanager.service.TaskStorageService
+import com.taskmanager.service.AgentType
+import com.taskmanager.service.TaskStorageType
 import com.taskmanager.service.TrackerType
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -18,6 +20,8 @@ class TrackerSettingsDialog(private val project: Project) : DialogWrapper(projec
     private val storageService = TaskStorageService.getInstance(project)
     private val currentConfig = storageService.loadTrackerConfig()
 
+    private val agentCombo = ComboBox(AgentType.entries.toTypedArray())
+    private val storageCombo = ComboBox(TaskStorageType.entries.toTypedArray())
     private val typeCombo = ComboBox(TrackerType.entries.toTypedArray())
     private val baseUrlField = JBTextField(currentConfig.baseUrl, 30)
     private val hintLabel = JBLabel("")
@@ -26,12 +30,26 @@ class TrackerSettingsDialog(private val project: Project) : DialogWrapper(projec
         title = "Task Tracker Settings"
         init()
 
+        agentCombo.renderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(
+                list: JList<*>?, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+            ) = super.getListCellRendererComponent(list, (value as AgentType).displayName, index, isSelected, cellHasFocus)
+        }
+
         typeCombo.renderer = object : DefaultListCellRenderer() {
             override fun getListCellRendererComponent(
                 list: JList<*>?, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
             ) = super.getListCellRendererComponent(list, (value as TrackerType).displayName, index, isSelected, cellHasFocus)
         }
 
+        storageCombo.renderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(
+                list: JList<*>?, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+            ) = super.getListCellRendererComponent(list, (value as TaskStorageType).displayName, index, isSelected, cellHasFocus)
+        }
+
+        agentCombo.selectedItem = currentConfig.agent
+        storageCombo.selectedItem = currentConfig.taskStorage
         typeCombo.selectedItem = currentConfig.type
         updateHint()
 
@@ -56,7 +74,21 @@ class TrackerSettingsDialog(private val project: Project) : DialogWrapper(projec
         val panel = JPanel()
         panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
         panel.border = JBUI.Borders.empty(8)
-        panel.preferredSize = Dimension(420, 140)
+        panel.preferredSize = Dimension(420, 220)
+
+        val agentPanel = JPanel(BorderLayout(8, 0))
+        agentPanel.add(JBLabel("Agent:"), BorderLayout.WEST)
+        agentPanel.add(agentCombo, BorderLayout.CENTER)
+        agentPanel.maximumSize = Dimension(Int.MAX_VALUE, 32)
+        panel.add(agentPanel)
+        panel.add(Box.createVerticalStrut(8))
+
+        val storagePanel = JPanel(BorderLayout(8, 0))
+        storagePanel.add(JBLabel("Tasks:"), BorderLayout.WEST)
+        storagePanel.add(storageCombo, BorderLayout.CENTER)
+        storagePanel.maximumSize = Dimension(Int.MAX_VALUE, 32)
+        panel.add(storagePanel)
+        panel.add(Box.createVerticalStrut(8))
 
         // Tracker type
         val typePanel = JPanel(BorderLayout(8, 0))
@@ -93,10 +125,14 @@ class TrackerSettingsDialog(private val project: Project) : DialogWrapper(projec
 
     override fun doOKAction() {
         val selected = typeCombo.selectedItem as TrackerType
+        val selectedAgent = agentCombo.selectedItem as AgentType
+        val selectedStorage = storageCombo.selectedItem as TaskStorageType
         storageService.saveTrackerConfig(
             com.taskmanager.service.TrackerConfig(
                 type = selected,
-                baseUrl = baseUrlField.text.trim()
+                baseUrl = baseUrlField.text.trim(),
+                agent = selectedAgent,
+                taskStorage = selectedStorage
             )
         )
         super.doOKAction()

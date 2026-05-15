@@ -108,8 +108,9 @@ class TaskGroupPanel(
         header.add(leftHeader, BorderLayout.CENTER)
 
         // Run group button
+        val agent = TaskStorageService.getInstance(project).loadTrackerConfig().agent
         val runButton = JButton(AllIcons.Actions.Execute)
-        runButton.toolTipText = "Run all tasks in group with Claude"
+        runButton.toolTipText = "Run all tasks in group with ${agent.displayName}"
         runButton.preferredSize = Dimension(28, 28)
         runButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         runButton.isBorderPainted = false

@@ -18,6 +18,9 @@ out/
 # Claude local data
 .claude/
 
+# Codex local data
+.agents/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# task-cli.sh — CLI helper for managing tasks in .claude/tasks/tasks.json
-# Used by Claude skills to avoid reading/writing raw JSON manually.
+# task-cli.sh — CLI helper for managing Task Manager tasks.
+# Used by agent skills to avoid reading/writing raw JSON manually.
 #
 # Usage:
 #   task-cli.sh list [--group <id>] [--status <s>] [--all]  — list groups/tasks (includes config)
@@ -16,7 +16,40 @@
 
 set -euo pipefail
 
-TASKS_DIR=".claude/tasks"
+resolve_tasks_dir() {
+    if [ -n "${TASK_MANAGER_TASKS_DIR:-}" ]; then
+        echo "$TASK_MANAGER_TASKS_DIR"
+        return
+    fi
+
+    if [ -d ".claude/tasks" ]; then
+        echo ".claude/tasks"
+        return
+    fi
+
+    if [ -d ".agents/tasks" ]; then
+        echo ".agents/tasks"
+        return
+    fi
+
+    if [ -d ".kiro/tasks" ]; then
+        echo ".kiro/tasks"
+        return
+    fi
+
+    if [ -d ".idea/agents-tasks" ]; then
+        echo ".idea/agents-tasks"
+        return
+    fi
+
+    case "${TASK_MANAGER_AGENT:-}" in
+        codex|CODEX|Codex) echo ".agents/tasks" ;;
+        kiro|KIRO|Kiro|kiro-cli) echo ".kiro/tasks" ;;
+        *) echo ".claude/tasks" ;;
+    esac
+}
+
+TASKS_DIR="$(resolve_tasks_dir)"
 TASKS_FILE="$TASKS_DIR/tasks.json"
 DOCS_DIR="$TASKS_DIR/docs"
 CONFIG_FILE="$TASKS_DIR/config.json"
@@ -25,6 +58,10 @@ ensure_dirs() {
     mkdir -p "$TASKS_DIR" "$DOCS_DIR"
     if [ ! -f "$TASKS_FILE" ]; then
         echo '{"groups":[]}' > "$TASKS_FILE"
+    fi
+    if [ ! -f "$TASKS_DIR/task-cli.sh" ] && [ -f "${0:-}" ]; then
+        cp "$0" "$TASKS_DIR/task-cli.sh" 2>/dev/null || true
+        chmod +x "$TASKS_DIR/task-cli.sh" 2>/dev/null || true
     fi
 }
 
@@ -201,21 +238,26 @@ cmd_add_group() {
     local now
     now=$(now_iso)
 
+    _TCL_NAME="$name" _TCL_GID="$group_id" _TCL_NOW="$now" _TCL_FILE="$TASKS_FILE" \
     python3 -c "
-import json
-with open('$TASKS_FILE') as f:
+import json, os
+name = os.environ['_TCL_NAME']
+gid = os.environ['_TCL_GID']
+now = os.environ['_TCL_NOW']
+fpath = os.environ['_TCL_FILE']
+with open(fpath) as f:
     data = json.load(f)
 max_order = max((g['order'] for g in data['groups']), default=0)
 data['groups'].append({
-    'id': '$group_id',
-    'name': $(python3 -c "import json; print(json.dumps('$name'))"),
+    'id': gid,
+    'name': name,
     'order': max_order + 1,
-    'createdAt': '$now',
+    'createdAt': now,
     'tasks': []
 })
-with open('$TASKS_FILE', 'w') as f:
+with open(fpath, 'w') as f:
     json.dump(data, f, indent=2)
-print('$group_id')
+print(gid)
 "
 }
 
@@ -230,30 +272,39 @@ cmd_add_task() {
     now=$(now_iso)
     local md_path="$group_id/$task_id.md"
 
+    _TCL_GID="$group_id" _TCL_NAME="$name" _TCL_DESC="$description" \
+    _TCL_TID="$task_id" _TCL_NOW="$now" _TCL_MD="$md_path" _TCL_FILE="$TASKS_FILE" \
     python3 -c "
-import json
-with open('$TASKS_FILE') as f:
+import json, os
+gid = os.environ['_TCL_GID']
+name = os.environ['_TCL_NAME']
+desc = os.environ['_TCL_DESC']
+tid = os.environ['_TCL_TID']
+now = os.environ['_TCL_NOW']
+md = os.environ['_TCL_MD']
+fpath = os.environ['_TCL_FILE']
+with open(fpath) as f:
     data = json.load(f)
 found = False
 for g in data['groups']:
-    if g['id'] == '$group_id':
+    if g['id'] == gid:
         g['tasks'].append({
-            'id': '$task_id',
-            'name': $(python3 -c "import json; print(json.dumps('$name'))"),
-            'description': $(python3 -c "import json; print(json.dumps('$description'))"),
+            'id': tid,
+            'name': name,
+            'description': desc,
             'status': 'new',
-            'mdFile': '$md_path',
-            'createdAt': '$now',
-            'updatedAt': '$now',
+            'mdFile': md,
+            'createdAt': now,
+            'updatedAt': now,
             'commitId': ''
         })
         found = True
         break
 if not found:
     print('Group not found'); exit(1)
-with open('$TASKS_FILE', 'w') as f:
+with open(fpath, 'w') as f:
     json.dump(data, f, indent=2)
-print('$task_id')
+print(tid)
 "
 
     # Create MD file

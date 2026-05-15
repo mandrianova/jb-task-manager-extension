@@ -10,12 +10,16 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import com.taskmanager.actions.TerminalHelper
 import com.taskmanager.model.Task
 import com.taskmanager.model.TaskGroup
 import com.taskmanager.model.TaskStatus
+import com.taskmanager.service.AgentType
+import com.taskmanager.service.TrackerConfig
 import com.taskmanager.service.TaskStorageService
 import java.awt.BorderLayout
+import java.awt.Font
 import javax.swing.BoxLayout
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
@@ -27,19 +31,21 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
     private val groupsContainer = JPanel()
     private val paginationPanel: PaginationPanel
     private val emptyLabel = JBLabel("No tasks yet. Use + to create a task group.")
+    private val agentStatusLabel = JBLabel("")
     private var allGroups: List<TaskGroup> = emptyList()
 
     init {
         border = JBUI.Borders.empty()
 
-        // Auto-initialize project files on first open
-        if (!storageService.isInitialized()) {
-            storageService.initializeProject()
-        }
-
         // Toolbar
         val toolbar = createToolbar()
-        add(toolbar.component, BorderLayout.NORTH)
+        val header = JPanel(BorderLayout())
+        header.add(toolbar.component, BorderLayout.NORTH)
+        agentStatusLabel.border = JBUI.Borders.empty(2, 8, 4, 8)
+        agentStatusLabel.font = agentStatusLabel.font.deriveFont(Font.PLAIN, 11f)
+        agentStatusLabel.foreground = UIUtil.getContextHelpForeground()
+        header.add(agentStatusLabel, BorderLayout.SOUTH)
+        add(header, BorderLayout.NORTH)
 
         // Groups container
         groupsContainer.layout = BoxLayout(groupsContainer, BoxLayout.Y_AXIS)
@@ -65,9 +71,10 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
     private fun createToolbar(): ActionToolbar {
         val actionGroup = DefaultActionGroup().apply {
             add(createSimpleAction("Refresh", AllIcons.Actions.Refresh) { refresh() })
-            add(createSimpleAction("Create Task with Claude", AllIcons.General.Add) {
+            add(createAgentSelectorAction())
+            add(createSimpleAction("Create Task with Agent", AllIcons.General.Add) {
                 ApplicationManager.getApplication().invokeLater {
-                    TerminalHelper.runClaudeSkill(project, "task-create", "", "Create Task")
+                    TerminalHelper.runAgentSkill(project, "task-create", "", "Create Task")
                 }
             })
             addSeparator()
@@ -79,16 +86,17 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
             })
             add(createSimpleAction("Setup Permissions", AllIcons.Nodes.SecurityRole) {
                 ApplicationManager.getApplication().invokeLater {
-                    TerminalHelper.runClaudeSkill(project, "task-setup", "", "Setup Permissions")
+                    TerminalHelper.runAgentSkill(project, "task-setup", "", "Setup Permissions")
                 }
             })
-            add(object : AnAction("Install / Update Claude Skills", "Install or update task skills and task-cli.sh", AllIcons.Nodes.CopyOfFolder) {
+            add(object : AnAction("Install / Update Agent Skills", "Install or update task skills for the configured agent and task-cli.sh", AllIcons.Nodes.CopyOfFolder) {
                 override fun actionPerformed(e: AnActionEvent) {
-                    val alreadyInstalled = storageService.areSkillsInstalled()
+                    val agent = storageService.loadTrackerConfig().agent
+                    val alreadyInstalled = storageService.areSkillsInstalled(agent)
                     if (alreadyInstalled) {
                         val choice = Messages.showYesNoDialog(
                             project,
-                            "Skills are already installed. Overwrite with the latest version from the plugin?",
+                            "${agent.displayName} skills are already installed. Overwrite with the latest version from the plugin?",
                             "Update Skills",
                             "Update",
                             "Cancel",
@@ -97,13 +105,14 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
                         if (choice != Messages.YES) return
                     }
 
-                    val changed = storageService.installSkills(overwrite = alreadyInstalled)
+                    val changed = storageService.installSkills(agent, overwrite = alreadyInstalled)
                     if (changed) {
                         val verb = if (alreadyInstalled) "updated" else "installed"
                         Messages.showInfoMessage(
                             project,
-                            "Skills $verb in .claude/skills/\n\n" +
-                                "• task-execute\n• task-create\n• task-setup\n• task-cli.sh",
+                            "Skills $verb in ${agent.skillsPathLabel}/\n\n" +
+                                "• task-execute\n• task-create\n• task-setup\n\n" +
+                                "task-cli.sh is installed in ${storageService.getTasksBasePathRelative()}/.",
                             "Skills ${verb.replaceFirstChar { it.uppercase() }}"
                         )
                     } else if (!alreadyInstalled) {
@@ -138,6 +147,52 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
         return toolbar
     }
 
+    private fun createAgentSelectorAction(): AnAction {
+        return object : DefaultActionGroup("Agent", true) {
+            init {
+                templatePresentation.icon = AllIcons.General.Settings
+            }
+
+            override fun update(e: AnActionEvent) {
+                val agent = storageService.loadTrackerConfig().agent
+                e.presentation.text = agent.displayName
+                e.presentation.description = "Choose agent for task actions"
+            }
+
+            override fun getChildren(e: AnActionEvent?): Array<AnAction> {
+                return AgentType.entries.map { agent ->
+                    object : AnAction(agent.displayName) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            val current = storageService.loadTrackerConfig()
+                            if (current.agent == agent) return
+                            storageService.saveTrackerConfig(
+                                TrackerConfig(
+                                    type = current.type,
+                                    baseUrl = current.baseUrl,
+                                    agent = agent,
+                                    taskStorage = current.taskStorage
+                                )
+                            )
+                        }
+
+                        override fun update(e: AnActionEvent) {
+                            val currentAgent = storageService.loadTrackerConfig().agent
+                            e.presentation.icon = if (currentAgent == agent) {
+                                AllIcons.General.InspectionsOK
+                            } else {
+                                null
+                            }
+                        }
+
+                        override fun getActionUpdateThread() = ActionUpdateThread.BGT
+                    }
+                }.toTypedArray()
+            }
+
+            override fun getActionUpdateThread() = ActionUpdateThread.BGT
+        }
+    }
+
     private fun createSimpleAction(text: String, icon: javax.swing.Icon, action: () -> Unit): com.intellij.openapi.actionSystem.AnAction {
         return object : com.intellij.openapi.actionSystem.AnAction(text, text, icon) {
             override fun actionPerformed(e: com.intellij.openapi.actionSystem.AnActionEvent) {
@@ -147,6 +202,7 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
     }
 
     fun refresh() {
+        updateAgentStatus()
         val data = storageService.loadTasks()
         // Sort: active groups first, then newest by createdAt (with order as fallback)
         allGroups = data.groups.sortedWith(
@@ -156,6 +212,12 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
         )
         paginationPanel.update(allGroups.size)
         renderGroups()
+    }
+
+    private fun updateAgentStatus() {
+        val config = storageService.loadTrackerConfig()
+        agentStatusLabel.text = "Agent: ${config.agent.displayName} | Tasks: ${storageService.getTasksBasePathRelative()}"
+        agentStatusLabel.toolTipText = "Current task agent and storage path"
     }
 
     private fun renderGroups() {
@@ -189,13 +251,13 @@ class TaskManagerPanel(private val project: Project) : JBPanel<JBPanel<*>>(Borde
 
     private fun runGroup(group: TaskGroup) {
         ApplicationManager.getApplication().invokeLater {
-            TerminalHelper.runClaudeSkill(project, "task-execute", group.id, "Group: ${group.name}")
+            TerminalHelper.runAgentSkill(project, "task-execute", group.id, "Group: ${group.name}")
         }
     }
 
     private fun runTask(task: Task) {
         ApplicationManager.getApplication().invokeLater {
-            TerminalHelper.runClaudeSkill(project, "task-execute", task.id, "Task: ${task.name}")
+            TerminalHelper.runAgentSkill(project, "task-execute", task.id, "Task: ${task.name}")
         }
     }
 

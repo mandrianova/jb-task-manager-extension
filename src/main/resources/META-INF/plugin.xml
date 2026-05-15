@@ -3,7 +3,7 @@
     <name>Task Manager</name>
     <vendor>Personal</vendor>
     <description><![CDATA[
-        <p>Task management plugin with Claude Code integration for tracking and executing
+        <p>Task management plugin with Claude Code, Codex, and Kiro CLI integration for tracking and executing
         project tasks directly from the IDE.</p>
 
         <h3>Features</h3>
@@ -12,13 +12,13 @@
             <li>Task statuses: New, In Progress, Completed, Paused, Cancelled</li>
             <li>Each task shows how long ago it was opened and last updated</li>
             <li>Each task links to a Markdown file with detailed description and instructions</li>
-            <li>Run tasks via Claude Code — opens a terminal with <code>/task-execute</code> skill</li>
-            <li>Create tasks from the UI or via <code>/task-create</code> Claude skill</li>
+            <li>Run tasks via the configured agent — opens a terminal with <code>task-execute</code> skill</li>
+            <li>Create tasks from the UI or via the <code>task-create</code> agent skill</li>
             <li>Commit tracking — attach a commit hash to a completed task and view its diff in Git Log</li>
             <li>External tracker links — detects Linear, Jira, GitHub Issues, YouTrack IDs in group names</li>
             <li>Completed groups auto-collapse and fade, sinking to the bottom of the list</li>
             <li>Pagination with configurable page size</li>
-            <li>Commands tab — browse and run all Claude commands and skills in the project</li>
+            <li>Commands tab — browse and run commands and skills for the configured agent</li>
             <li>Available as a side panel, bottom panel, or editor tab</li>
             <li>Auto-archiving of completed groups to keep the task file compact</li>
         </ul>
@@ -30,6 +30,14 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <h3>1.17.0</h3>
+        <ul>
+            <li>Add agent selection in settings: Claude Code, Codex, or Kiro CLI</li>
+            <li>Add configurable task storage with auto-detection for .claude/tasks, .agents/tasks, .kiro/tasks, and .idea/agents-tasks</li>
+            <li>Codex skills install globally to ~/.agents/skills</li>
+            <li>Toolbar run actions now launch the configured agent</li>
+        </ul>
+
         <h3>1.16.0</h3>
         <ul>
             <li>Groups now sorted newest first (by createdAt, descending) — was oldest first</li>

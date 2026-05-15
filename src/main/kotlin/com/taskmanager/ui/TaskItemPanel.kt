@@ -137,8 +137,9 @@ class TaskItemPanel(
 
                 // Run button only for NEW and PAUSED
                 if (task.status != TaskStatus.IN_PROGRESS) {
+                    val agent = TaskStorageService.getInstance(project).loadTrackerConfig().agent
                     val runButton = JButton(AllIcons.Actions.Execute)
-                    runButton.toolTipText = "Run task with Claude"
+                    runButton.toolTipText = "Run task with ${agent.displayName}"
                     runButton.preferredSize = Dimension(28, 28)
                     runButton.cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
                     runButton.isBorderPainted = false
